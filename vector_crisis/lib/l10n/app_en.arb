@@ -5,6 +5,7 @@
   "bootErrorTitle": "Unable to start the app",
   "bootErrorBody": "Close the app and try opening it again.",
   "retry": "TRY AGAIN",
+  "testModeBanner": "TEST MODE",
   "settings": "Settings",
   "homeTagline": "Read every arrow. Solve the order. Clear the chaos.",
   "startNewGameTitle": "Start a new game?",

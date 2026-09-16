@@ -38,6 +38,8 @@ iOS bundle identifier: com.rgoksu.vectorcrisis
 
 ## Son doğrulama
 
+- Release komutlarında `--dart-define=TEST_MODE=true` kullanılmadığını doğrula.
+
 ```bash
 flutter analyze
 flutter test

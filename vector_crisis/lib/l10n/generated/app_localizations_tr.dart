@@ -25,6 +25,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get retry => 'TEKRAR DENE';
 
   @override
+  String get testModeBanner => 'TEST MODU';
+
+  @override
   String get settings => 'Ayarlar';
 
   @override

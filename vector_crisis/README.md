@@ -28,6 +28,15 @@ flutter test
 flutter run -d ios
 ```
 
+Tüm level'ları gerçek ilerlemeyi değiştirmeden açan test modu:
+
+```bash
+flutter run --dart-define=TEST_MODE=true
+```
+
+`TEST_MODE` varsayılan olarak `false` değerindedir ve etkin olduğunda uygulamada
+görünür bir test modu şeridi gösterilir.
+
 Projede Android, iOS, macOS, web, Linux ve Windows için Flutter platform
 iskeletleri bulunur. Oyun portre moduna sabitlenmiştir.
 

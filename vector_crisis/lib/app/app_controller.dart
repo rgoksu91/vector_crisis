@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/app_config.dart';
 import '../game/data/levels.dart';
 
 class AppController extends ChangeNotifier {
@@ -12,6 +13,9 @@ class AppController extends ChangeNotifier {
 
   SharedPreferences? _preferences;
   final Map<int, int> _bestMoves = {};
+  final bool isTestMode;
+
+  AppController({bool testMode = TEST_MODE}) : isTestMode = testMode;
 
   bool isReady = false;
   int unlockedLevel = 1;
@@ -20,6 +24,7 @@ class AppController extends ChangeNotifier {
   String? localeCode;
 
   bool get hasProgress => completedLevels > 0 || unlockedLevel > 1;
+  int get accessibleLevel => isTestMode ? levels.length : unlockedLevel;
   int get completedLevels => _bestMoves.length;
   int get totalStars =>
       _bestMoves.entries.fold(0, (sum, entry) => sum + starsFor(entry.key));
@@ -34,7 +39,7 @@ class AppController extends ChangeNotifier {
     localeCode = preferences.getString(_localeKey);
 
     unlockedLevel = unlockedLevel.clamp(1, levels.length);
-    lastLevel = lastLevel.clamp(1, unlockedLevel);
+    lastLevel = lastLevel.clamp(1, accessibleLevel);
     for (final level in levels) {
       final moves = preferences.getInt('$_bestMovesPrefix${level.id}');
       if (moves != null) _bestMoves[level.id] = moves;
@@ -55,7 +60,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> selectLevel(int level) async {
-    if (level < 1 || level > unlockedLevel) return;
+    if (level < 1 || level > accessibleLevel) return;
     lastLevel = level;
     notifyListeners();
     await _preferences?.setInt(_lastLevelKey, lastLevel);

@@ -39,4 +39,26 @@ void main() {
     controller.dispose();
     restored.dispose();
   });
+
+  test('test mode opens every level without changing real progress', () async {
+    SharedPreferences.setMockInitialValues({});
+    final controller = AppController(testMode: true);
+    await controller.initialize();
+
+    expect(controller.isTestMode, isTrue);
+    expect(controller.unlockedLevel, 1);
+    expect(controller.accessibleLevel, 100);
+
+    await controller.selectLevel(100);
+    expect(controller.lastLevel, 100);
+    expect(controller.unlockedLevel, 1);
+
+    final productionController = AppController();
+    await productionController.initialize();
+    expect(productionController.accessibleLevel, 1);
+    expect(productionController.lastLevel, 1);
+
+    controller.dispose();
+    productionController.dispose();
+  });
 }

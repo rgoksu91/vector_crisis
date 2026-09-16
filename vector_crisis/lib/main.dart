@@ -73,6 +73,16 @@ class _VectorCrisisAppState extends State<VectorCrisisApp> {
             : Locale(_controller.localeCode!),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) {
+          final content = child ?? const SizedBox.shrink();
+          if (!_controller.isTestMode) return content;
+          return Banner(
+            message: AppLocalizations.of(context).testModeBanner,
+            location: BannerLocation.topEnd,
+            color: AppColors.danger,
+            child: content,
+          );
+        },
         home: FutureBuilder<void>(
           future: _boot,
           builder: (context, snapshot) {

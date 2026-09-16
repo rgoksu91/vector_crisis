@@ -25,6 +25,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retry => 'TRY AGAIN';
 
   @override
+  String get testModeBanner => 'TEST MODE';
+
+  @override
   String get settings => 'Settings';
 
   @override

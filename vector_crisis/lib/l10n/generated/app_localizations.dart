@@ -128,6 +128,12 @@ abstract class AppLocalizations {
   /// **'TRY AGAIN'**
   String get retry;
 
+  /// No description provided for @testModeBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'TEST MODE'**
+  String get testModeBanner;
+
   /// No description provided for @settings.
   ///
   /// In en, this message translates to:

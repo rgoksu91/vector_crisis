@@ -70,7 +70,7 @@ class LevelSelectPage extends StatelessWidget {
                     itemCount: levels.length,
                     itemBuilder: (context, index) {
                       final level = index + 1;
-                      final unlocked = level <= controller.unlockedLevel;
+                      final unlocked = level <= controller.accessibleLevel;
                       final stars = controller.starsFor(level);
                       return _LevelTile(
                         level: level,

@@ -5,6 +5,7 @@
   "bootErrorTitle": "Uygulama başlatılamadı",
   "bootErrorBody": "Uygulamayı kapatıp yeniden açmayı dene.",
   "retry": "TEKRAR DENE",
+  "testModeBanner": "TEST MODU",
   "settings": "Ayarlar",
   "homeTagline": "Her oku oku. Sırayı çöz. Kaosu temizle.",
   "startNewGameTitle": "Yeni oyun başlat?",

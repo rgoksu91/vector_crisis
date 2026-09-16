@@ -232,7 +232,7 @@ class _ProgressCard extends StatelessWidget {
           Container(width: 1, height: 38, color: Colors.white12),
           Expanded(
             child: _Stat(
-              value: '${controller.unlockedLevel}',
+              value: '${controller.accessibleLevel}',
               label: l10n.unlockedLevel,
             ),
           ),
