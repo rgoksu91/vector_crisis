@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.rgoksu.vector_crisis"
+    namespace = "com.rgoksu.arrowchaos"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -16,7 +16,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.rgoksu.vector_crisis"
+        applicationId = "com.rgoksu.arrowchaos"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -16,6 +16,16 @@ import 'models/game_hud_state.dart';
 import 'models/level_data.dart';
 
 class ArrowChaosGame extends FlameGame {
+  final int initialLevelIndex;
+  final bool Function() hapticsEnabled;
+  final void Function(int level, int moves)? onLevelCompleted;
+
+  ArrowChaosGame({
+    this.initialLevelIndex = 0,
+    required this.hapticsEnabled,
+    this.onLevelCompleted,
+  });
+
   final ValueNotifier<GameHudState> hud = ValueNotifier<GameHudState>(
     GameHudState.initial(),
   );
@@ -40,7 +50,7 @@ class ArrowChaosGame extends FlameGame {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    _loadLevel(0);
+    _loadLevel(initialLevelIndex.clamp(0, levels.length - 1));
   }
 
   void onArrowTapped(ArrowComponent arrow) {
@@ -50,7 +60,7 @@ class ArrowChaosGame extends FlameGame {
       _combo = 0;
       _moves++;
       arrow.playBlocked();
-      HapticFeedback.heavyImpact();
+      _haptic(HapticFeedback.heavyImpact);
       _setMessage('Buzlu ok: yanındaki bir oku çıkar.');
       _publishHud();
       _checkMoveLimit();
@@ -63,7 +73,7 @@ class ArrowChaosGame extends FlameGame {
       _combo = 0;
       _moves++;
       arrow.rotateClockwise();
-      HapticFeedback.selectionClick();
+      _haptic(HapticFeedback.selectionClick);
       _setMessage('Rotator 90° döndü.');
       _publishHud();
       _checkMoveLimit();
@@ -74,7 +84,7 @@ class ArrowChaosGame extends FlameGame {
       _combo = 0;
       _moves++;
       arrow.playBlocked();
-      HapticFeedback.mediumImpact();
+      _haptic(HapticFeedback.mediumImpact);
       _setMessage('Önü kapalı.');
       _publishHud();
       _checkMoveLimit();
@@ -83,7 +93,7 @@ class ArrowChaosGame extends FlameGame {
 
     _combo++;
     _moves++;
-    HapticFeedback.lightImpact();
+    _haptic(HapticFeedback.lightImpact);
     _setMessage(_combo >= 3 ? 'Combo x$_combo' : '');
     _launchArrow(arrow);
     _publishHud();
@@ -130,7 +140,7 @@ class ArrowChaosGame extends FlameGame {
     }
 
     candidate.playHint();
-    HapticFeedback.selectionClick();
+    _haptic(HapticFeedback.selectionClick);
     _setMessage(
       candidate.type == ArrowType.rotator && !canExit(candidate)
           ? 'İpucu: turuncu oku döndür.'
@@ -140,6 +150,19 @@ class ArrowChaosGame extends FlameGame {
 
   void restartLevel() {
     _loadLevel(_currentLevelIndex);
+  }
+
+  void grantBonusMoves(int amount) {
+    if (hud.value.phase != GamePhase.failed || amount <= 0) return;
+    _moveLimit = (_moveLimit ?? _moves) + amount;
+    _levelLocked = false;
+    _combo = 0;
+    hud.value = hud.value.copyWith(
+      phase: GamePhase.playing,
+      moveLimit: _moveLimit,
+      message: '+$amount hamle kazandın!',
+    );
+    _setMessage('+$amount hamle kazandın!');
   }
 
   void nextLevel() {
@@ -262,7 +285,7 @@ class ArrowChaosGame extends FlameGame {
       victim.startExplosion(victim.removeFromParent);
     }
 
-    HapticFeedback.heavyImpact();
+    _haptic(HapticFeedback.heavyImpact);
     _setMessage(victims.isEmpty ? 'BOOM!' : 'BOOM! +${victims.length}');
     _thawFrozenNear(removedCells);
     _actionInProgress = false;
@@ -307,13 +330,14 @@ class ArrowChaosGame extends FlameGame {
     if (_levelLocked) return;
 
     _levelLocked = true;
-    HapticFeedback.heavyImpact();
+    _haptic(HapticFeedback.heavyImpact);
     final allDone = _currentLevelIndex == levels.length - 1;
     hud.value = hud.value.copyWith(
       remaining: 0,
       phase: allDone ? GamePhase.allLevelsCompleted : GamePhase.won,
       message: allDone ? 'MVP tamamlandı!' : 'Board clear!',
     );
+    onLevelCompleted?.call(_currentLevel.id, _moves);
   }
 
   void _checkMoveLimit() {
@@ -325,7 +349,7 @@ class ArrowChaosGame extends FlameGame {
     _levelLocked = true;
     _actionInProgress = false;
     _combo = 0;
-    HapticFeedback.heavyImpact();
+    _haptic(HapticFeedback.heavyImpact);
     hud.value = hud.value.copyWith(
       combo: 0,
       moves: _moves,
@@ -356,6 +380,10 @@ class ArrowChaosGame extends FlameGame {
 
   bool _isAdjacent(int r1, int c1, int r2, int c2) =>
       BoardRules.areAdjacent(r1, c1, r2, c2);
+
+  void _haptic(Future<void> Function() feedback) {
+    if (hapticsEnabled()) feedback();
+  }
 
   String _levelIntroMessage(int level) => switch (level) {
     1 => 'Oka dokun ve board dışına çıkar.',

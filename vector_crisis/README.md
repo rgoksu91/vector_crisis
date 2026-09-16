@@ -1,8 +1,8 @@
 # Arrow Chaos
 
-Arrow Chaos, Flutter ve Flame ile geliştirilmiş portre yönelimli bir grid puzzle
-MVP'sidir. Oyuncu, önündeki yol açık olan okları board dışına çıkararak level'ı
-temizler.
+Arrow Chaos, Flutter ve Flame ile geliştirilmiş portre yönelimli tam bir grid
+puzzle uygulamasıdır. Oyuncu, önündeki yol açık olan okları board dışına
+çıkararak level'ı temizler.
 
 ## Oyun kuralları
 
@@ -35,7 +35,12 @@ iskeletleri bulunur. Oyun portre moduna sabitlenmiştir.
 
 - 3x3 ile 6x6 arasında 100 kontrollü, arc tabanlı level
 - Normal, rotator, frozen ve bomb oklar
-- Move-efficiency bütçesi, combo, haptic feedback, hint, restart ve level geçişi
+- Animasyonlu splash ve ana sayfa; yeni oyun, devam et ve level seçimi
+- Kalıcı ilerleme, en iyi hamle, 1–3 yıldız ve kilit açma sistemi
+- Move-efficiency bütçesi, combo, haptic feedback, hint, pause ve restart
+- AdMob geçiş reklamı: Level 12'den sonra her dört level geçişinde
+- AdMob ödüllü reklamı: başarısız denemede isteğe bağlı +3 hamle
+- Google UMP onay akışı ve uygulama içi reklam gizlilik tercihleri
 - Sprite gerektirmeyen Canvas çizimleri
 - Level veri bütünlüğü, path kuralları, özel oklar ve solver/gameplay uyumu için
   otomatik testler
@@ -43,3 +48,6 @@ iskeletleri bulunur. Oyun portre moduna sabitlenmiştir.
 Level tasarım kaynağı `LEVEL_DESIGN.md`, uygulama kuralları
 `IMPLEMENTATION_INSTRUCTIONS.md`, son katalog metrikleri ise `LEVEL_AUDIT.md`
 dosyasındadır.
+
+Yayın öncesi zorunlu AdMob, signing ve store ayarları `RELEASE_CHECKLIST.md`
+dosyasında listelenmiştir.
