@@ -2,6 +2,27 @@ import 'package:flutter/foundation.dart';
 
 enum GamePhase { playing, won, failed, allLevelsCompleted }
 
+enum GameHudMessage {
+  none,
+  frozenArrowBlocked,
+  rotatorTurned,
+  pathBlocked,
+  combo,
+  noAvailableMove,
+  hintRotate,
+  hintMarked,
+  bonusMoves,
+  bomb,
+  campaignCompleted,
+  boardClear,
+  moveLimitReached,
+  introTapArrow,
+  introRotator,
+  introFrozen,
+  introBomb,
+  introRotatorClockwise,
+}
+
 @immutable
 class GameHudState {
   final int level;
@@ -11,7 +32,8 @@ class GameHudState {
   final int moves;
   final int? moveLimit;
   final GamePhase phase;
-  final String message;
+  final GameHudMessage message;
+  final int messageValue;
 
   const GameHudState({
     required this.level,
@@ -22,6 +44,7 @@ class GameHudState {
     required this.moveLimit,
     required this.phase,
     required this.message,
+    this.messageValue = 0,
   });
 
   factory GameHudState.initial() => const GameHudState(
@@ -32,7 +55,7 @@ class GameHudState {
     moves: 0,
     moveLimit: null,
     phase: GamePhase.playing,
-    message: '',
+    message: GameHudMessage.none,
   );
 
   GameHudState copyWith({
@@ -43,7 +66,8 @@ class GameHudState {
     int? moves,
     int? moveLimit,
     GamePhase? phase,
-    String? message,
+    GameHudMessage? message,
+    int? messageValue,
   }) {
     return GameHudState(
       level: level ?? this.level,
@@ -54,6 +78,7 @@ class GameHudState {
       moveLimit: moveLimit ?? this.moveLimit,
       phase: phase ?? this.phase,
       message: message ?? this.message,
+      messageValue: messageValue ?? this.messageValue,
     );
   }
 }

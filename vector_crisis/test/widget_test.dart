@@ -9,6 +9,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final controller = AppController();
     await controller.initialize();
+    await controller.setLocaleCode('en');
 
     await tester.pumpWidget(
       VectorCrisisApp(
@@ -23,14 +24,38 @@ void main() {
 
     expect(find.text('VECTOR CRISIS'), findsOneWidget);
     expect(find.text('ARROW PUZZLE'), findsOneWidget);
-    expect(find.text('YENİ OYUN'), findsOneWidget);
+    expect(find.text('NEW GAME'), findsOneWidget);
 
-    await tester.tap(find.text('YENİ OYUN'));
+    await tester.tap(find.text('NEW GAME'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.text('LEVEL 1'), findsOneWidget);
-    expect(find.text('1 OK KALDI'), findsOneWidget);
+    expect(find.text('1 ARROW LEFT'), findsOneWidget);
+
+    controller.dispose();
+  });
+
+  testWidgets('Turkish can be selected independently of the device locale', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'settings.locale': 'tr'});
+    final controller = AppController();
+    await controller.initialize();
+
+    await tester.pumpWidget(
+      VectorCrisisApp(
+        controller: controller,
+        ads: AdsService(),
+        showSplash: false,
+        initializeAds: false,
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('YENİ OYUN'), findsOneWidget);
+    expect(find.text('BÖLÜM SEÇ'), findsOneWidget);
 
     controller.dispose();
   });

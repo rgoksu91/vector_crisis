@@ -14,6 +14,7 @@ void main() {
     await controller.completeLevel(level: 1, moves: 1);
     await controller.selectLevel(2);
     await controller.setHapticsEnabled(false);
+    await controller.setLocaleCode('tr');
 
     expect(controller.unlockedLevel, 2);
     expect(controller.lastLevel, 2);
@@ -26,6 +27,10 @@ void main() {
     expect(restored.lastLevel, 2);
     expect(restored.bestMovesFor(1), 1);
     expect(restored.hapticsEnabled, isFalse);
+    expect(restored.localeCode, 'tr');
+
+    await restored.setLocaleCode(null);
+    expect(restored.localeCode, isNull);
 
     await restored.resetProgress();
     expect(restored.unlockedLevel, 1);

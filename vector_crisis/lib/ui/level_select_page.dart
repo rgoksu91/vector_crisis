@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
 import '../game/data/levels.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/ads_service.dart';
 import 'design/animated_background.dart';
 import 'design/app_theme.dart';
@@ -20,6 +21,7 @@ class LevelSelectPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: AnimatedBackground(
         child: SafeArea(
@@ -34,10 +36,10 @@ class LevelSelectPage extends StatelessWidget {
                       icon: const Icon(Icons.arrow_back_rounded),
                     ),
                     const SizedBox(width: 8),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'LEVEL SEÇ',
-                        style: TextStyle(
+                        l10n.selectLevel,
+                        style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w900,
                         ),

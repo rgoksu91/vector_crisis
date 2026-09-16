@@ -7,6 +7,7 @@ class AppController extends ChangeNotifier {
   static const _unlockedKey = 'progress.unlockedLevel';
   static const _lastLevelKey = 'progress.lastLevel';
   static const _hapticsKey = 'settings.haptics';
+  static const _localeKey = 'settings.locale';
   static const _bestMovesPrefix = 'progress.bestMoves.';
 
   SharedPreferences? _preferences;
@@ -16,6 +17,7 @@ class AppController extends ChangeNotifier {
   int unlockedLevel = 1;
   int lastLevel = 1;
   bool hapticsEnabled = true;
+  String? localeCode;
 
   bool get hasProgress => completedLevels > 0 || unlockedLevel > 1;
   int get completedLevels => _bestMoves.length;
@@ -29,6 +31,7 @@ class AppController extends ChangeNotifier {
     unlockedLevel = preferences.getInt(_unlockedKey) ?? 1;
     lastLevel = preferences.getInt(_lastLevelKey) ?? 1;
     hapticsEnabled = preferences.getBool(_hapticsKey) ?? true;
+    localeCode = preferences.getString(_localeKey);
 
     unlockedLevel = unlockedLevel.clamp(1, levels.length);
     lastLevel = lastLevel.clamp(1, unlockedLevel);
@@ -90,5 +93,16 @@ class AppController extends ChangeNotifier {
     hapticsEnabled = value;
     notifyListeners();
     await _preferences?.setBool(_hapticsKey, value);
+  }
+
+  Future<void> setLocaleCode(String? value) async {
+    if (value != null && value != 'en' && value != 'tr') return;
+    localeCode = value;
+    notifyListeners();
+    if (value == null) {
+      await _preferences?.remove(_localeKey);
+    } else {
+      await _preferences?.setString(_localeKey, value);
+    }
   }
 }

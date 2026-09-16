@@ -7,6 +7,9 @@ Android applicationId: com.rgoksu.vectorcrisis
 iOS bundle identifier: com.rgoksu.vectorcrisis
 ```
 
+- App Store ve Google Play açıklamalarını Türkçe ve İngilizce olarak gir.
+- Mağaza ekran görüntülerini her iki dil için ayrı yükle.
+
 ## AdMob
 
 - `lib/services/ads_service.dart` içindeki `GecisId` değerini gerçek

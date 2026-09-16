@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import 'design/animated_background.dart';
 import 'design/app_theme.dart';
 
@@ -25,6 +26,7 @@ class _SplashPageState extends State<SplashPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final curve = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOutBack,
@@ -72,7 +74,7 @@ class _SplashPageState extends State<SplashPage>
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'ARROW PUZZLE  •  THINK  •  ESCAPE',
+                    l10n.splashTagline,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.54),
                       fontSize: 11,

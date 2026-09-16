@@ -61,7 +61,7 @@ class ArrowChaosGame extends FlameGame {
       _moves++;
       arrow.playBlocked();
       _haptic(HapticFeedback.heavyImpact);
-      _setMessage('Buzlu ok: yanındaki bir oku çıkar.');
+      _setMessage(GameHudMessage.frozenArrowBlocked);
       _publishHud();
       _checkMoveLimit();
       return;
@@ -74,7 +74,7 @@ class ArrowChaosGame extends FlameGame {
       _moves++;
       arrow.rotateClockwise();
       _haptic(HapticFeedback.selectionClick);
-      _setMessage('Rotator 90° döndü.');
+      _setMessage(GameHudMessage.rotatorTurned);
       _publishHud();
       _checkMoveLimit();
       return;
@@ -85,7 +85,7 @@ class ArrowChaosGame extends FlameGame {
       _moves++;
       arrow.playBlocked();
       _haptic(HapticFeedback.mediumImpact);
-      _setMessage('Önü kapalı.');
+      _setMessage(GameHudMessage.pathBlocked);
       _publishHud();
       _checkMoveLimit();
       return;
@@ -94,7 +94,10 @@ class ArrowChaosGame extends FlameGame {
     _combo++;
     _moves++;
     _haptic(HapticFeedback.lightImpact);
-    _setMessage(_combo >= 3 ? 'Combo x$_combo' : '');
+    _setMessage(
+      _combo >= 3 ? GameHudMessage.combo : GameHudMessage.none,
+      _combo,
+    );
     _launchArrow(arrow);
     _publishHud();
   }
@@ -135,7 +138,7 @@ class ArrowChaosGame extends FlameGame {
     }
 
     if (candidate == null) {
-      _setMessage('Şu an kullanılabilir hamle yok.');
+      _setMessage(GameHudMessage.noAvailableMove);
       return;
     }
 
@@ -143,8 +146,8 @@ class ArrowChaosGame extends FlameGame {
     _haptic(HapticFeedback.selectionClick);
     _setMessage(
       candidate.type == ArrowType.rotator && !canExit(candidate)
-          ? 'İpucu: turuncu oku döndür.'
-          : 'İpucu işaretlendi.',
+          ? GameHudMessage.hintRotate
+          : GameHudMessage.hintMarked,
     );
   }
 
@@ -160,9 +163,9 @@ class ArrowChaosGame extends FlameGame {
     hud.value = hud.value.copyWith(
       phase: GamePhase.playing,
       moveLimit: _moveLimit,
-      message: '+$amount hamle kazandın!',
+      message: GameHudMessage.none,
     );
-    _setMessage('+$amount hamle kazandın!');
+    _setMessage(GameHudMessage.bonusMoves, amount);
   }
 
   void nextLevel() {
@@ -286,7 +289,7 @@ class ArrowChaosGame extends FlameGame {
     }
 
     _haptic(HapticFeedback.heavyImpact);
-    _setMessage(victims.isEmpty ? 'BOOM!' : 'BOOM! +${victims.length}');
+    _setMessage(GameHudMessage.bomb, victims.length);
     _thawFrozenNear(removedCells);
     _actionInProgress = false;
     _publishHud();
@@ -335,7 +338,9 @@ class ArrowChaosGame extends FlameGame {
     hud.value = hud.value.copyWith(
       remaining: 0,
       phase: allDone ? GamePhase.allLevelsCompleted : GamePhase.won,
-      message: allDone ? 'MVP tamamlandı!' : 'Board clear!',
+      message: allDone
+          ? GameHudMessage.campaignCompleted
+          : GameHudMessage.boardClear,
     );
     onLevelCompleted?.call(_currentLevel.id, _moves);
   }
@@ -354,7 +359,7 @@ class ArrowChaosGame extends FlameGame {
       combo: 0,
       moves: _moves,
       phase: GamePhase.failed,
-      message: 'Hamle sınırı doldu.',
+      message: GameHudMessage.moveLimitReached,
     );
   }
 
@@ -366,14 +371,17 @@ class ArrowChaosGame extends FlameGame {
     );
   }
 
-  void _setMessage(String message) {
+  void _setMessage(GameHudMessage message, [int value = 0]) {
     _messageTimer?.cancel();
-    hud.value = hud.value.copyWith(message: message);
-    if (message.isEmpty) return;
+    hud.value = hud.value.copyWith(message: message, messageValue: value);
+    if (message == GameHudMessage.none) return;
 
     _messageTimer = async.Timer(const Duration(milliseconds: 1300), () {
       if (hud.value.phase == GamePhase.playing) {
-        hud.value = hud.value.copyWith(message: '');
+        hud.value = hud.value.copyWith(
+          message: GameHudMessage.none,
+          messageValue: 0,
+        );
       }
     });
   }
@@ -385,13 +393,13 @@ class ArrowChaosGame extends FlameGame {
     if (hapticsEnabled()) feedback();
   }
 
-  String _levelIntroMessage(int level) => switch (level) {
-    1 => 'Oka dokun ve board dışına çıkar.',
-    6 => 'Turuncu: önü kapalıysa 90° döner.',
-    8 => 'Buzlu ok: komşu ok çıkınca çözülür.',
-    10 => 'Kırmızı bomba: komşuları patlatır.',
-    16 => 'Turuncu ok önü kapalıyken saat yönünde döner.',
-    _ => '',
+  GameHudMessage _levelIntroMessage(int level) => switch (level) {
+    1 => GameHudMessage.introTapArrow,
+    6 => GameHudMessage.introRotator,
+    8 => GameHudMessage.introFrozen,
+    10 => GameHudMessage.introBomb,
+    16 => GameHudMessage.introRotatorClockwise,
+    _ => GameHudMessage.none,
   };
 
   @override

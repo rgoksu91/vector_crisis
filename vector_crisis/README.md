@@ -37,6 +37,7 @@ iskeletleri bulunur. Oyun portre moduna sabitlenmiştir.
 - Normal, rotator, frozen ve bomb oklar
 - Animasyonlu splash ve ana sayfa; yeni oyun, devam et ve level seçimi
 - Kalıcı ilerleme, en iyi hamle, 1–3 yıldız ve kilit açma sistemi
+- Cihaz dilini izleyen ve ayarlardan değiştirilebilen Türkçe/İngilizce arayüz
 - Move-efficiency bütçesi, combo, haptic feedback, hint, pause ve restart
 - AdMob geçiş reklamı: Level 12'den sonra her dört level geçişinde
 - AdMob ödüllü reklamı: başarısız denemede isteğe bağlı +3 hamle

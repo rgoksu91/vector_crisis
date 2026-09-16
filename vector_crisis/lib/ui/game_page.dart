@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../app/app_controller.dart';
 import '../game/arrow_chaos_game.dart';
 import '../game/models/game_hud_state.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/ads_service.dart';
 import 'design/app_theme.dart';
 
@@ -60,39 +61,36 @@ class _GamePageState extends State<GamePage> {
     if (earned) {
       game.grantBonusMoves(3);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Ödüllü reklam henüz hazır değil. Tekrar deneyebilirsin.',
-          ),
-        ),
-      );
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.rewardUnavailable)));
     }
   }
 
   Future<void> _showPause() async {
+    final l10n = AppLocalizations.of(context);
     game.pauseEngine();
     final action = await showDialog<_PauseAction>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('OYUN DURAKLATILDI'),
-        content: const Text('Board seni bekliyor.'),
+        title: Text(l10n.gamePaused),
+        content: Text(l10n.gamePausedBody),
         actionsAlignment: MainAxisAlignment.end,
         actions: [
           FilledButton(
             onPressed: () => Navigator.pop(context, _PauseAction.resume),
-            child: const Text('DEVAM ET'),
+            child: Text(l10n.resume),
           ),
           TextButton.icon(
             onPressed: () => Navigator.pop(context, _PauseAction.restart),
             icon: const Icon(Icons.refresh_rounded),
-            label: const Text('LEVEL’I YENİDEN BAŞLAT'),
+            label: Text(l10n.restartLevel),
           ),
           TextButton.icon(
             onPressed: () => Navigator.pop(context, _PauseAction.home),
             icon: const Icon(Icons.home_rounded),
-            label: const Text('ANA MENÜ'),
+            label: Text(l10n.mainMenu),
           ),
         ],
       ),
@@ -166,6 +164,7 @@ class _Hud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SafeArea(
       child: Stack(
         children: [
@@ -177,13 +176,13 @@ class _Hud extends StatelessWidget {
               children: [
                 _CircleButton(
                   icon: Icons.home_rounded,
-                  tooltip: 'Ana menü',
+                  tooltip: l10n.homeTooltip,
                   onTap: onHome,
                 ),
                 const SizedBox(width: 9),
                 _CircleButton(
                   icon: Icons.refresh_rounded,
-                  tooltip: 'Yeniden başlat',
+                  tooltip: l10n.restartTooltip,
                   onTap: game.restartLevel,
                 ),
                 const SizedBox(width: 10),
@@ -191,7 +190,7 @@ class _Hud extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        'LEVEL ${state.level}',
+                        l10n.levelNumber(state.level),
                         style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
@@ -201,8 +200,12 @@ class _Hud extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         state.moveLimit == null
-                            ? '${state.remaining} OK KALDI'
-                            : '${state.remaining} OK  •  ${state.moves}/${state.moveLimit} HAMLE',
+                            ? l10n.arrowsRemaining(state.remaining)
+                            : l10n.arrowsAndMoves(
+                                state.remaining,
+                                state.moves,
+                                state.moveLimit!,
+                              ),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
@@ -216,7 +219,7 @@ class _Hud extends StatelessWidget {
                 const SizedBox(width: 10),
                 _CircleButton(
                   icon: Icons.lightbulb_rounded,
-                  tooltip: 'İpucu',
+                  tooltip: l10n.hintTooltip,
                   onTap: state.phase == GamePhase.playing
                       ? game.showHint
                       : null,
@@ -224,7 +227,7 @@ class _Hud extends StatelessWidget {
                 const SizedBox(width: 9),
                 _CircleButton(
                   icon: Icons.pause_rounded,
-                  tooltip: 'Duraklat',
+                  tooltip: l10n.pauseTooltip,
                   onTap: onPause,
                 ),
               ],
@@ -242,14 +245,15 @@ class _Hud extends StatelessWidget {
                 ),
               ),
             ),
-          if (state.message.isNotEmpty && state.phase == GamePhase.playing)
+          if (state.message != GameHudMessage.none &&
+              state.phase == GamePhase.playing)
             Positioned(
               bottom: 28,
               left: 20,
               right: 20,
               child: Center(
                 child: _Pill(
-                  text: state.message,
+                  text: _localizedGameMessage(l10n, state),
                   color: AppColors.surfaceLight,
                 ),
               ),
@@ -305,6 +309,7 @@ class _ResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final failed = state.phase == GamePhase.failed;
     final allDone = state.phase == GamePhase.allLevelsCompleted;
     return Container(
@@ -338,10 +343,10 @@ class _ResultCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             failed
-                ? 'HAMLE BİTTİ'
+                ? l10n.movesEnded
                 : allDone
-                ? '100 LEVEL TAMAMLANDI'
-                : 'BOARD TEMİZ',
+                ? l10n.allLevelsCompleted
+                : l10n.boardClear,
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
           ),
@@ -358,10 +363,10 @@ class _ResultCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             failed
-                ? 'Sırayı yeniden düşün veya reklam izleyerek 3 ek hamle kazan.'
+                ? l10n.failedDescription
                 : allDone
-                ? 'Kaosu tamamen kontrol altına aldın.'
-                : '${state.moves} hamlede tamamlandı.',
+                ? l10n.allDoneDescription
+                : l10n.completedInMoves(state.moves),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.62),
@@ -379,7 +384,7 @@ class _ResultCard extends StatelessWidget {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.ondemand_video_rounded),
-              label: const Text('REKLAM İZLE  •  +3 HAMLE'),
+              label: Text(l10n.watchAdBonus),
             ),
             const SizedBox(height: 10),
             OutlinedButton(
@@ -387,20 +392,43 @@ class _ResultCard extends StatelessWidget {
                 minimumSize: const Size.fromHeight(50),
               ),
               onPressed: onRestart,
-              child: const Text('YENİDEN BAŞLAT'),
+              child: Text(l10n.restart),
             ),
           ] else
             FilledButton(
               onPressed: onNext,
-              child: Text(allDone ? 'ANA MENÜYE DÖN' : 'SONRAKİ LEVEL'),
+              child: Text(allDone ? l10n.returnToMainMenu : l10n.nextLevel),
             ),
           const SizedBox(height: 6),
-          TextButton(onPressed: onHome, child: const Text('ANA MENÜ')),
+          TextButton(onPressed: onHome, child: Text(l10n.mainMenu)),
         ],
       ),
     );
   }
 }
+
+String _localizedGameMessage(AppLocalizations l10n, GameHudState state) =>
+    switch (state.message) {
+      GameHudMessage.none => '',
+      GameHudMessage.frozenArrowBlocked => l10n.frozenArrowBlocked,
+      GameHudMessage.rotatorTurned => l10n.rotatorTurned,
+      GameHudMessage.pathBlocked => l10n.pathBlocked,
+      GameHudMessage.combo => 'COMBO x${state.messageValue}',
+      GameHudMessage.noAvailableMove => l10n.noAvailableMove,
+      GameHudMessage.hintRotate => l10n.hintRotate,
+      GameHudMessage.hintMarked => l10n.hintMarked,
+      GameHudMessage.bonusMoves => l10n.bonusMovesGranted(state.messageValue),
+      GameHudMessage.bomb =>
+        state.messageValue == 0 ? 'BOOM!' : l10n.bombResult(state.messageValue),
+      GameHudMessage.campaignCompleted => l10n.campaignCompletedMessage,
+      GameHudMessage.boardClear => l10n.boardClearMessage,
+      GameHudMessage.moveLimitReached => l10n.moveLimitReached,
+      GameHudMessage.introTapArrow => l10n.introTapArrow,
+      GameHudMessage.introRotator => l10n.introRotator,
+      GameHudMessage.introFrozen => l10n.introFrozen,
+      GameHudMessage.introBomb => l10n.introBomb,
+      GameHudMessage.introRotatorClockwise => l10n.introRotatorClockwise,
+    };
 
 class _Pill extends StatelessWidget {
   final String text;

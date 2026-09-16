@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
+import '../l10n/generated/app_localizations.dart';
 import '../services/ads_service.dart';
 import 'design/animated_background.dart';
 import 'design/app_theme.dart';
@@ -47,20 +48,21 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _newGame() async {
+    final l10n = AppLocalizations.of(context);
     if (widget.controller.hasProgress) {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Yeni oyun başlat?'),
-          content: const Text('Mevcut ilerleme ve tüm yıldızlar silinecek.'),
+          title: Text(l10n.startNewGameTitle),
+          content: Text(l10n.startNewGameBody),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('VAZGEÇ'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('YENİ OYUN'),
+              child: Text(l10n.newGame),
             ),
           ],
         ),
@@ -73,6 +75,7 @@ class _HomePageState extends State<HomePage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: AnimatedBackground(
         child: SafeArea(
@@ -86,7 +89,7 @@ class _HomePageState extends State<HomePage>
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       IconButton.filledTonal(
-                        tooltip: 'Ayarlar',
+                        tooltip: l10n.settings,
                         onPressed: () => showSettingsSheet(
                           context,
                           controller: widget.controller,
@@ -130,7 +133,7 @@ class _HomePageState extends State<HomePage>
                   ),
                   const SizedBox(height: 9),
                   Text(
-                    'Her oku oku. Sırayı çöz. Kaosu temizle.',
+                    l10n.homeTagline,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.58),
@@ -142,7 +145,7 @@ class _HomePageState extends State<HomePage>
                       onPressed: () => _openGame(widget.controller.lastLevel),
                       icon: const Icon(Icons.play_arrow_rounded),
                       label: Text(
-                        'DEVAM ET  •  LEVEL ${widget.controller.lastLevel}',
+                        l10n.continueLevel(widget.controller.lastLevel),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -159,7 +162,7 @@ class _HomePageState extends State<HomePage>
                     ),
                     onPressed: _newGame,
                     icon: const Icon(Icons.add_rounded),
-                    label: const Text('YENİ OYUN'),
+                    label: Text(l10n.newGame),
                   ),
                   const SizedBox(height: 12),
                   TextButton.icon(
@@ -172,13 +175,13 @@ class _HomePageState extends State<HomePage>
                       ),
                     ),
                     icon: const Icon(Icons.grid_view_rounded),
-                    label: const Text('LEVEL SEÇ'),
+                    label: Text(l10n.selectLevel),
                   ),
                   const SizedBox(height: 30),
                   _ProgressCard(controller: widget.controller),
                   const SizedBox(height: 18),
                   Text(
-                    '100 HANDCRAFTED PUZZLES',
+                    l10n.handcraftedPuzzles,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.32),
                       fontSize: 10,
@@ -203,6 +206,7 @@ class _ProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -215,21 +219,21 @@ class _ProgressCard extends StatelessWidget {
           Expanded(
             child: _Stat(
               value: '${controller.completedLevels}',
-              label: 'TAMAMLANDI',
+              label: l10n.completed,
             ),
           ),
           Container(width: 1, height: 38, color: Colors.white12),
           Expanded(
             child: _Stat(
               value: '${controller.totalStars}/300',
-              label: 'YILDIZ',
+              label: l10n.stars,
             ),
           ),
           Container(width: 1, height: 38, color: Colors.white12),
           Expanded(
             child: _Stat(
               value: '${controller.unlockedLevel}',
-              label: 'AÇIK LEVEL',
+              label: l10n.unlockedLevel,
             ),
           ),
         ],
