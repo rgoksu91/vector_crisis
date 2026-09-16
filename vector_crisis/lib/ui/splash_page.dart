@@ -39,13 +39,8 @@ class _SplashPageState extends State<SplashPage>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 104,
-                    height: 104,
+                  DecoratedBox(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.secondary],
-                      ),
                       borderRadius: BorderRadius.circular(30),
                       boxShadow: [
                         BoxShadow(
@@ -54,15 +49,19 @@ class _SplashPageState extends State<SplashPage>
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.arrow_outward_rounded,
-                      size: 62,
-                      color: Colors.white,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(30),
+                      child: Image.asset(
+                        'assets/branding/app_icon_concept_v1.png',
+                        width: 104,
+                        height: 104,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 26),
                   const Text(
-                    'ARROW\nCHAOS',
+                    'VECTOR\nCRISIS',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 38,
@@ -73,7 +72,7 @@ class _SplashPageState extends State<SplashPage>
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'READ  •  ROTATE  •  ESCAPE',
+                    'ARROW PUZZLE  •  THINK  •  ESCAPE',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.54),
                       fontSize: 11,

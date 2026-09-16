@@ -1,4 +1,4 @@
-# Arrow Chaos — 100-Level Audit
+# Vector Crisis: Arrow Puzzle — 100-Level Audit
 
 Audit source: `dart run tool/level_audit.dart`
 

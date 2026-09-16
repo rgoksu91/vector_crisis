@@ -99,36 +99,36 @@ class _HomePageState extends State<HomePage>
                   const SizedBox(height: 10),
                   Transform.scale(
                     scale: 1 + _pulse.value * 0.035,
-                    child: Container(
-                      width: 92,
-                      height: 92,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppColors.primary, AppColors.secondary],
-                        ),
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(
-                              alpha: 0.25 + _pulse.value * 0.2,
-                            ),
-                            blurRadius: 30 + _pulse.value * 18,
-                          ),
-                        ],
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: Image.asset(
+                        'assets/branding/app_icon_concept_v1.png',
+                        width: 92,
+                        height: 92,
+                        fit: BoxFit.cover,
                       ),
-                      child: const Icon(Icons.arrow_outward_rounded, size: 56),
                     ),
                   ),
                   const SizedBox(height: 22),
                   const Text(
-                    'ARROW CHAOS',
+                    'VECTOR CRISIS',
                     style: TextStyle(
                       fontSize: 34,
                       fontWeight: FontWeight.w900,
                       letterSpacing: -1.2,
                     ),
                   ),
-                  const SizedBox(height: 7),
+                  const SizedBox(height: 5),
+                  const Text(
+                    'ARROW PUZZLE',
+                    style: TextStyle(
+                      color: AppColors.secondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2.4,
+                    ),
+                  ),
+                  const SizedBox(height: 9),
                   Text(
                     'Her oku oku. Sırayı çöz. Kaosu temizle.',
                     textAlign: TextAlign.center,

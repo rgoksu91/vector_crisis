@@ -1,11 +1,11 @@
 {
-    "name": "vector_crisis",
-    "short_name": "vector_crisis",
+    "name": "Vector Crisis: Arrow Puzzle",
+    "short_name": "Vector Crisis",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#070A16",
+    "theme_color": "#7C8CFF",
+    "description": "Solve the order, free every arrow, and clear the chaos.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

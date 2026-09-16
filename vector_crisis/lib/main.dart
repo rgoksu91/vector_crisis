@@ -15,16 +15,16 @@ Future<void> main() async {
     DeviceOrientation.portraitUp,
   ]);
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  runApp(const ArrowChaosApp());
+  runApp(const VectorCrisisApp());
 }
 
-class ArrowChaosApp extends StatefulWidget {
+class VectorCrisisApp extends StatefulWidget {
   final AppController? controller;
   final AdsService? ads;
   final bool showSplash;
   final bool initializeAds;
 
-  const ArrowChaosApp({
+  const VectorCrisisApp({
     super.key,
     this.controller,
     this.ads,
@@ -33,10 +33,10 @@ class ArrowChaosApp extends StatefulWidget {
   });
 
   @override
-  State<ArrowChaosApp> createState() => _ArrowChaosAppState();
+  State<VectorCrisisApp> createState() => _VectorCrisisAppState();
 }
 
-class _ArrowChaosAppState extends State<ArrowChaosApp> {
+class _VectorCrisisAppState extends State<VectorCrisisApp> {
   late final AppController _controller = widget.controller ?? AppController();
   late final AdsService _ads = widget.ads ?? AdsService();
   late Future<void> _boot = _initialize();
@@ -63,7 +63,7 @@ class _ArrowChaosAppState extends State<ArrowChaosApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Arrow Chaos',
+      title: 'Vector Crisis: Arrow Puzzle',
       theme: buildAppTheme(),
       home: FutureBuilder<void>(
         future: _boot,

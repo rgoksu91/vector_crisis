@@ -11,7 +11,7 @@ void main() {
     await controller.initialize();
 
     await tester.pumpWidget(
-      ArrowChaosApp(
+      VectorCrisisApp(
         controller: controller,
         ads: AdsService(),
         showSplash: false,
@@ -21,7 +21,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('ARROW CHAOS'), findsOneWidget);
+    expect(find.text('VECTOR CRISIS'), findsOneWidget);
+    expect(find.text('ARROW PUZZLE'), findsOneWidget);
     expect(find.text('YENİ OYUN'), findsOneWidget);
 
     await tester.tap(find.text('YENİ OYUN'));

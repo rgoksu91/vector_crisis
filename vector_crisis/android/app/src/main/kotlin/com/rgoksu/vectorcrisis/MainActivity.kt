@@ -1,4 +1,4 @@
-package com.rgoksu.arrowchaos
+package com.rgoksu.vectorcrisis
 
 import io.flutter.embedding.android.FlutterActivity
 

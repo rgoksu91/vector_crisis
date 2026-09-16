@@ -1,8 +1,8 @@
-# Arrow Chaos — Level Design Specification
+# Vector Crisis: Arrow Puzzle — Level Design Specification
 
 ## 1. Purpose
 
-This document is the source of truth for Arrow Chaos level design.
+This document is the source of truth for Vector Crisis level design.
 
 Current state:
 - Levels 1–9 remain the unchanged original baseline.
@@ -27,7 +27,7 @@ Priority order:
 
 ## 2. Core Level Design Principles
 
-A good Arrow Chaos level should:
+A good Vector Crisis level should:
 - be understandable at first glance without being instantly solved;
 - contain at least one meaningful decision;
 - progressively open the board as the player succeeds;

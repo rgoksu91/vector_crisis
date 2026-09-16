@@ -1,10 +1,10 @@
-# Arrow Chaos — Release Checklist
+# Vector Crisis: Arrow Puzzle — Release Checklist
 
 Uygulama kimliği:
 
 ```text
-Android applicationId: com.rgoksu.arrowchaos
-iOS bundle identifier: com.rgoksu.arrowchaos
+Android applicationId: com.rgoksu.vectorcrisis
+iOS bundle identifier: com.rgoksu.vectorcrisis
 ```
 
 ## AdMob

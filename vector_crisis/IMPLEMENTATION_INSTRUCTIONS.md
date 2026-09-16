@@ -1,4 +1,4 @@
-# Arrow Chaos — Codex için Kritik Uygulama Talimatları
+# Vector Crisis: Arrow Puzzle — Codex için Kritik Uygulama Talimatları
 
 Bu projede en önemli konu sadece 100 adet solvable level üretmek değildir.
 

@@ -1,6 +1,6 @@
-# Arrow Chaos
+# Vector Crisis: Arrow Puzzle
 
-Arrow Chaos, Flutter ve Flame ile geliştirilmiş portre yönelimli tam bir grid
+Vector Crisis, Flutter ve Flame ile geliştirilmiş portre yönelimli tam bir grid
 puzzle uygulamasıdır. Oyuncu, önündeki yol açık olan okları board dışına
 çıkararak level'ı temizler.
 
