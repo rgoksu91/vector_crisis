@@ -12,17 +12,28 @@ iOS bundle identifier: com.rgoksu.vectorcrisis
 
 ## AdMob
 
-- `lib/services/ads_service.dart` içindeki `GecisId` değerini gerçek
-  interstitial reklam birimi ID'siyle değiştir.
-- Aynı dosyadaki `OdulId` değerini gerçek rewarded reklam birimi ID'siyle
-  değiştir.
+- Android ve iOS için ayrı interstitial/rewarded reklam birimleri oluştur.
+- Release build sırasında gerçek reklam birimi ID'lerini şu `--dart-define`
+  anahtarlarıyla ver: `ADMOB_ANDROID_INTERSTITIAL_ID`,
+  `ADMOB_ANDROID_REWARDED_ID`, `ADMOB_IOS_INTERSTITIAL_ID` ve
+  `ADMOB_IOS_REWARDED_ID`.
+- Release build'i gerçek ID olmadan yayınlama. `GecisId` ve `OdulId`, reklam
+  servisini kapalı tutan geçici fallback değerleridir.
 - `android/app/src/main/AndroidManifest.xml` içindeki Google test app ID'sini
   Android AdMob app ID'siyle değiştir.
 - `ios/Runner/Info.plist` içindeki Google test app ID'sini iOS AdMob app ID'siyle
   değiştir.
 - AdMob panelinde GDPR/UMP mesajını yayınla ve test cihazlarını tanımla.
 - Gerçek reklam kimliklerini yalnız release öncesi kullan; geliştirme sırasında
-  Google'ın test reklam birimlerini kullan.
+  uygulamanın otomatik seçtiği Google test reklam birimlerini kullan.
+- İlk 7 level'ın reklamsız kaldığını; ilk geçiş reklamının en erken Level 8
+  sonrasında ve iki dakikalık oturumdan sonra çıkabildiğini doğrula.
+- Sonraki geçiş reklamları arasında en az üç level ve üç dakika olduğunu;
+  ödüllü reklamdan hemen sonra geçiş reklamı çıkmadığını doğrula.
+- Ödüllü +3 hamle hakkının jam olmuş board'da görünmediğini ve aynı denemede
+  yalnız bir kez kullanılabildiğini doğrula.
+- İki ücretsiz ipucundan sonra açık onayla +2 ipucu reklamının sunulduğunu ve
+  aynı denemede ikinci kez kullanılamadığını doğrula.
 
 ## Signing ve mağaza
 

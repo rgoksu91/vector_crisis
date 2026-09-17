@@ -86,9 +86,11 @@ iskeletleri bulunur. Oyun portre moduna sabitlenmiştir.
 - Cihaz dilini izleyen ve ayarlardan değiştirilebilen Türkçe/İngilizce arayüz
 - Move-efficiency bütçesi, combo, haptic feedback, solver tabanlı hint, pause ve
   restart
-- AdMob geçiş reklamı: Level 12'den sonra her dört level geçişinde
-- AdMob ödüllü reklamı: hamle bütçesi dolunca isteğe bağlı +3 hamle (tıkanan
-  board'da sunulmaz)
+- Deneme başına 2 ücretsiz ipucu; hak bitince bir kez ödüllü reklamla +2 ipucu
+- AdMob geçiş reklamı: öğreticiden sonra, en az üç bölüm ve üç dakikalık
+  aralıklarla yalnız doğal bölüm geçişlerinde
+- AdMob ödüllü reklamı: hamle bütçesi dolunca deneme başına bir kez isteğe
+  bağlı +3 hamle (tıkanan board'da sunulmaz)
 - Google UMP onay akışı ve uygulama içi reklam gizlilik tercihleri
 - Sprite gerektirmeyen Canvas çizimleri
 - Level veri bütünlüğü, taş kuralları, zorluk artışı, zorluk eşikleri ve
@@ -101,3 +103,8 @@ tasarım belgeleridir ve tarihsel referans olarak saklanır.
 
 Yayın öncesi zorunlu AdMob, signing ve store ayarları `RELEASE_CHECKLIST.md`
 dosyasında listelenmiştir.
+
+Debug build'ler Google'ın resmi test reklam birimlerini kullanır. Production
+reklam birimleri release build'e `ADMOB_ANDROID_INTERSTITIAL_ID`,
+`ADMOB_ANDROID_REWARDED_ID`, `ADMOB_IOS_INTERSTITIAL_ID` ve
+`ADMOB_IOS_REWARDED_ID` dart-define değerleriyle verilir.

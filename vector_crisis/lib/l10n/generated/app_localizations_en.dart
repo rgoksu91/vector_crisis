@@ -115,6 +115,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'The rewarded ad isn\'t ready yet. Please try again.';
 
   @override
+  String get rewardAdLoading => 'AD IS LOADING...';
+
+  @override
+  String get rewardAlreadyUsedDescription =>
+      'The extra-move rescue has already been used for this attempt. Restart and rethink the order.';
+
+  @override
   String get gamePaused => 'GAME PAUSED';
 
   @override
@@ -137,6 +144,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hintTooltip => 'Hint';
+
+  @override
+  String get noHintsRemaining => 'No hints left for this attempt.';
+
+  @override
+  String get hintRewardTitle => 'OUT OF HINTS';
+
+  @override
+  String get hintRewardDescription =>
+      'Watch one optional ad to get 2 more hints for this attempt.';
+
+  @override
+  String get watchAdHints => 'WATCH AD  •  +2 HINTS';
 
   @override
   String get pauseTooltip => 'Pause';
@@ -174,7 +194,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get failedDescription =>
-      'Rethink the order or watch an ad to earn 3 extra moves.';
+      'Rethink the order or watch one optional ad to continue with 3 extra moves.';
 
   @override
   String get allDoneDescription =>
@@ -186,7 +206,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get watchAdBonus => 'WATCH AD  •  +3 MOVES';
+  String get watchAdBonus => 'WATCH AD  •  CONTINUE +3';
 
   @override
   String get restart => 'RESTART';

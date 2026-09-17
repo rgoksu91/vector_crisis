@@ -38,6 +38,9 @@ bool _isJammed(LevelData position) {
 }
 
 class ArrowChaosGame extends FlameGame {
+  static const freeHintsPerAttempt = 2;
+  static const rewardedHintAmount = 2;
+
   final int initialLevelIndex;
   final bool Function() hapticsEnabled;
   final void Function(int level, int moves)? onLevelCompleted;
@@ -65,6 +68,9 @@ class ArrowChaosGame extends FlameGame {
   int _combo = 0;
   int _moves = 0;
   int? _moveLimit;
+  bool _rewardedContinueUsed = false;
+  int _hintsRemaining = freeHintsPerAttempt;
+  bool _rewardedHintUsed = false;
   double _cellSize = 64;
   Vector2 _boardOrigin = Vector2.zero();
   bool _levelLocked = false;
@@ -179,7 +185,7 @@ class ArrowChaosGame extends FlameGame {
   }
 
   void showHint() {
-    if (_levelLocked || _actionInProgress) return;
+    if (_levelLocked || _actionInProgress || _hintsRemaining <= 0) return;
 
     // The first exitable arrow is exactly how an unplanned player loses, so
     // the hint follows the solver from the current position instead.
@@ -191,11 +197,28 @@ class ArrowChaosGame extends FlameGame {
     }
 
     candidate.playHint();
+    _hintsRemaining--;
     _haptic(HapticFeedback.selectionClick);
     _setMessage(
       candidate.type == ArrowType.rotator && !canExit(candidate)
           ? GameHudMessage.hintRotate
           : GameHudMessage.hintMarked,
+    );
+    hud.value = hud.value.copyWith(hintsRemaining: _hintsRemaining);
+  }
+
+  void grantBonusHints(int amount) {
+    if (hud.value.phase != GamePhase.playing ||
+        amount <= 0 ||
+        _hintsRemaining > 0 ||
+        _rewardedHintUsed) {
+      return;
+    }
+    _rewardedHintUsed = true;
+    _hintsRemaining = amount;
+    hud.value = hud.value.copyWith(
+      hintsRemaining: _hintsRemaining,
+      rewardedHintUsed: true,
     );
   }
 
@@ -264,12 +287,15 @@ class ArrowChaosGame extends FlameGame {
     if (hud.value.phase != GamePhase.failed || amount <= 0) return;
     // Extra moves cannot unjam a board; only a restart can.
     if (hud.value.message == GameHudMessage.boardJammed) return;
+    if (_rewardedContinueUsed) return;
+    _rewardedContinueUsed = true;
     _moveLimit = (_moveLimit ?? _moves) + amount;
     _levelLocked = false;
     _combo = 0;
     hud.value = hud.value.copyWith(
       phase: GamePhase.playing,
       moveLimit: _moveLimit,
+      rewardedContinueUsed: true,
       message: GameHudMessage.none,
     );
     _setMessage(GameHudMessage.bonusMoves, amount);
@@ -295,6 +321,9 @@ class ArrowChaosGame extends FlameGame {
     _combo = 0;
     _moves = 0;
     _moveLimit = _currentLevel.moveLimit;
+    _rewardedContinueUsed = false;
+    _hintsRemaining = freeHintsPerAttempt;
+    _rewardedHintUsed = false;
     _levelLocked = false;
     _actionInProgress = false;
     _arrows.clear();
@@ -354,6 +383,11 @@ class ArrowChaosGame extends FlameGame {
       combo: 0,
       moves: 0,
       moveLimit: _moveLimit,
+      targetMoves: _currentLevel.targetMoves,
+      twoStarMoves: _currentLevel.twoStarMoves,
+      rewardedContinueUsed: false,
+      hintsRemaining: _hintsRemaining,
+      rewardedHintUsed: false,
       phase: GamePhase.playing,
       message: _levelIntroMessage(_currentLevel.id),
     );

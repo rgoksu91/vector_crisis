@@ -1,4 +1,5 @@
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
@@ -27,6 +28,7 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage> {
   late final ArrowChaosGame game;
   bool _rewardInProgress = false;
+  bool _levelTransitionInProgress = false;
 
   @override
   void initState() {
@@ -35,25 +37,31 @@ class _GamePageState extends State<GamePage> {
       initialLevelIndex: widget.initialLevel - 1,
       hapticsEnabled: () => widget.controller.hapticsEnabled,
       onLevelCompleted: (level, moves) {
+        widget.ads.recordLevelCompleted();
         widget.controller.completeLevel(level: level, moves: moves);
       },
     );
   }
 
   Future<void> _nextLevel(GameHudState state) async {
+    if (_levelTransitionInProgress) return;
+    _levelTransitionInProgress = true;
     if (state.phase == GamePhase.allLevelsCompleted) {
       if (mounted) Navigator.pop(context);
       return;
     }
-    if (state.level >= 12 && state.level % 4 == 0) {
-      await widget.ads.showInterstitial();
-    }
+    await widget.ads.showInterstitialIfEligible(
+      completedLevel: state.level,
+      adsAllowed: !widget.controller.isTestMode,
+    );
+    if (!mounted) return;
     await widget.controller.selectLevel(state.level + 1);
     game.nextLevel();
+    _levelTransitionInProgress = false;
   }
 
   Future<void> _rewardedContinue() async {
-    if (_rewardInProgress) return;
+    if (_rewardInProgress || widget.controller.isTestMode) return;
     setState(() => _rewardInProgress = true);
     final earned = await widget.ads.showRewarded();
     if (!mounted) return;
@@ -62,6 +70,57 @@ class _GamePageState extends State<GamePage> {
       game.grantBonusMoves(3);
     } else {
       final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.rewardUnavailable)));
+    }
+  }
+
+  Future<void> _requestHint(GameHudState state) async {
+    if (state.phase != GamePhase.playing || _rewardInProgress) return;
+    if (state.hintsRemaining > 0) {
+      game.showHint();
+      return;
+    }
+
+    final l10n = AppLocalizations.of(context);
+    if (state.rewardedHintUsed || widget.controller.isTestMode) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.noHintsRemaining)));
+      return;
+    }
+    if (!widget.ads.rewardedAvailability.value) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.rewardUnavailable)));
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.hintRewardTitle),
+        content: Text(l10n.hintRewardDescription),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.ondemand_video_rounded),
+            label: Text(l10n.watchAdHints),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _rewardInProgress = true);
+    final earned = await widget.ads.showRewarded();
+    if (!mounted) return;
+    setState(() => _rewardInProgress = false);
+    if (earned) {
+      game.grantBonusHints(ArrowChaosGame.rewardedHintAmount);
+    } else {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(l10n.rewardUnavailable)));
     }
@@ -120,9 +179,12 @@ class _GamePageState extends State<GamePage> {
               game: game,
               state: state,
               rewardInProgress: _rewardInProgress,
+              allowRewardedAds: !widget.controller.isTestMode,
+              rewardedAvailability: widget.ads.rewardedAvailability,
               onPause: _showPause,
               onHome: () => Navigator.pop(context),
               onNext: () => _nextLevel(state),
+              onHint: () => _requestHint(state),
               onRewardedContinue: _rewardedContinue,
             ),
           ),
@@ -138,27 +200,31 @@ class _Hud extends StatelessWidget {
   final ArrowChaosGame game;
   final GameHudState state;
   final bool rewardInProgress;
+  final bool allowRewardedAds;
+  final ValueListenable<bool> rewardedAvailability;
   final VoidCallback onPause;
   final VoidCallback onHome;
   final VoidCallback onNext;
+  final VoidCallback onHint;
   final VoidCallback onRewardedContinue;
 
   const _Hud({
     required this.game,
     required this.state,
     required this.rewardInProgress,
+    required this.allowRewardedAds,
+    required this.rewardedAvailability,
     required this.onPause,
     required this.onHome,
     required this.onNext,
+    required this.onHint,
     required this.onRewardedContinue,
   });
 
   int get _earnedStars {
-    final limit = state.moveLimit;
-    if (limit == null) return 3;
-    final optimum = limit - 2;
-    if (state.moves <= optimum) return 3;
-    if (state.moves == optimum + 1) return 2;
+    final target = state.targetMoves;
+    if (target == null || state.moves <= target) return 3;
+    if (state.moves <= (state.twoStarMoves ?? target)) return 2;
     return 1;
   }
 
@@ -217,12 +283,10 @@ class _Hud extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                _CircleButton(
-                  icon: Icons.lightbulb_rounded,
+                _HintButton(
+                  remaining: state.hintsRemaining,
                   tooltip: l10n.hintTooltip,
-                  onTap: state.phase == GamePhase.playing
-                      ? game.showHint
-                      : null,
+                  onTap: state.phase == GamePhase.playing ? onHint : null,
                 ),
                 const SizedBox(width: 9),
                 _CircleButton(
@@ -273,6 +337,8 @@ class _Hud extends StatelessWidget {
                       state: state,
                       stars: _earnedStars,
                       rewardInProgress: rewardInProgress,
+                      allowRewardedAds: allowRewardedAds,
+                      rewardedAvailability: rewardedAvailability,
                       onNext: onNext,
                       onRestart: game.restartLevel,
                       onHome: onHome,
@@ -292,6 +358,8 @@ class _ResultCard extends StatelessWidget {
   final GameHudState state;
   final int stars;
   final bool rewardInProgress;
+  final bool allowRewardedAds;
+  final ValueListenable<bool> rewardedAvailability;
   final VoidCallback onNext;
   final VoidCallback onRestart;
   final VoidCallback onHome;
@@ -301,6 +369,8 @@ class _ResultCard extends StatelessWidget {
     required this.state,
     required this.stars,
     required this.rewardInProgress,
+    required this.allowRewardedAds,
+    required this.rewardedAvailability,
     required this.onNext,
     required this.onRestart,
     required this.onHome,
@@ -368,7 +438,9 @@ class _ResultCard extends StatelessWidget {
             jammed
                 ? l10n.boardJammedDescription
                 : failed
-                ? l10n.failedDescription
+                ? state.rewardedContinueUsed
+                      ? l10n.rewardAlreadyUsedDescription
+                      : l10n.failedDescription
                 : allDone
                 ? l10n.allDoneDescription
                 : l10n.completedInMoves(state.moves),
@@ -381,17 +453,22 @@ class _ResultCard extends StatelessWidget {
           const SizedBox(height: 22),
           if (failed) ...[
             // Extra moves cannot open a jammed board, so only restart is offered.
-            if (!jammed) ...[
-              FilledButton.icon(
-                onPressed: rewardInProgress ? null : onRewardedContinue,
-                icon: rewardInProgress
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.ondemand_video_rounded),
-                label: Text(l10n.watchAdBonus),
+            if (allowRewardedAds && !jammed && !state.rewardedContinueUsed) ...[
+              ValueListenableBuilder<bool>(
+                valueListenable: rewardedAvailability,
+                builder: (context, ready, _) => FilledButton.icon(
+                  onPressed: rewardInProgress || !ready
+                      ? null
+                      : onRewardedContinue,
+                  icon: rewardInProgress || !ready
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.ondemand_video_rounded),
+                  label: Text(ready ? l10n.watchAdBonus : l10n.rewardAdLoading),
+                ),
               ),
               const SizedBox(height: 10),
             ],
@@ -495,5 +572,51 @@ class _CircleButton extends StatelessWidget {
         ),
       ),
     ),
+  );
+}
+
+class _HintButton extends StatelessWidget {
+  final int remaining;
+  final String tooltip;
+  final VoidCallback? onTap;
+
+  const _HintButton({
+    required this.remaining,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    clipBehavior: Clip.none,
+    children: [
+      _CircleButton(
+        icon: Icons.lightbulb_rounded,
+        tooltip: tooltip,
+        onTap: onTap,
+      ),
+      Positioned(
+        right: -4,
+        top: -5,
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 5),
+          decoration: BoxDecoration(
+            color: remaining > 0 ? AppColors.secondary : AppColors.danger,
+            borderRadius: BorderRadius.circular(99),
+            border: Border.all(color: AppColors.background, width: 2),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '$remaining',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ),
+    ],
   );
 }

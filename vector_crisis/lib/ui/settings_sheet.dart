@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
@@ -97,32 +98,34 @@ Future<void> showSettingsSheet(
                   );
                 },
               ),
-              const Divider(height: 28),
-              Text(
-                l10n.adConfiguration,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
+              if (kDebugMode) ...[
+                const Divider(height: 28),
+                Text(
+                  l10n.adConfiguration,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${l10n.interstitial}: ${AdUnitIds.interstitial}\n'
-                '${l10n.rewarded}: ${AdUnitIds.rewarded}',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  height: 1.5,
+                const SizedBox(height: 8),
+                Text(
+                  '${l10n.interstitial}: ${AdUnitIds.interstitial}\n'
+                  '${l10n.rewarded}: ${AdUnitIds.rewarded}',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    height: 1.5,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.adConfigurationWarning,
-                style: TextStyle(
-                  color: AppColors.gold.withValues(alpha: 0.9),
-                  fontSize: 12,
+                const SizedBox(height: 8),
+                Text(
+                  l10n.adConfigurationWarning,
+                  style: TextStyle(
+                    color: AppColors.gold.withValues(alpha: 0.9),
+                    fontSize: 12,
+                  ),
                 ),
-              ),
+              ],
             ],
           );
         },

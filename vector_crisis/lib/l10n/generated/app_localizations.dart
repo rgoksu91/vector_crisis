@@ -296,6 +296,18 @@ abstract class AppLocalizations {
   /// **'The rewarded ad isn\'t ready yet. Please try again.'**
   String get rewardUnavailable;
 
+  /// No description provided for @rewardAdLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'AD IS LOADING...'**
+  String get rewardAdLoading;
+
+  /// No description provided for @rewardAlreadyUsedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The extra-move rescue has already been used for this attempt. Restart and rethink the order.'**
+  String get rewardAlreadyUsedDescription;
+
   /// No description provided for @gamePaused.
   ///
   /// In en, this message translates to:
@@ -344,6 +356,30 @@ abstract class AppLocalizations {
   /// **'Hint'**
   String get hintTooltip;
 
+  /// No description provided for @noHintsRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'No hints left for this attempt.'**
+  String get noHintsRemaining;
+
+  /// No description provided for @hintRewardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'OUT OF HINTS'**
+  String get hintRewardTitle;
+
+  /// No description provided for @hintRewardDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch one optional ad to get 2 more hints for this attempt.'**
+  String get hintRewardDescription;
+
+  /// No description provided for @watchAdHints.
+  ///
+  /// In en, this message translates to:
+  /// **'WATCH AD  •  +2 HINTS'**
+  String get watchAdHints;
+
   /// No description provided for @pauseTooltip.
   ///
   /// In en, this message translates to:
@@ -389,7 +425,7 @@ abstract class AppLocalizations {
   /// No description provided for @failedDescription.
   ///
   /// In en, this message translates to:
-  /// **'Rethink the order or watch an ad to earn 3 extra moves.'**
+  /// **'Rethink the order or watch one optional ad to continue with 3 extra moves.'**
   String get failedDescription;
 
   /// No description provided for @allDoneDescription.
@@ -407,7 +443,7 @@ abstract class AppLocalizations {
   /// No description provided for @watchAdBonus.
   ///
   /// In en, this message translates to:
-  /// **'WATCH AD  •  +3 MOVES'**
+  /// **'WATCH AD  •  CONTINUE +3'**
   String get watchAdBonus;
 
   /// No description provided for @restart.

@@ -114,6 +114,13 @@ class AppLocalizationsTr extends AppLocalizations {
       'Ödüllü reklam henüz hazır değil. Tekrar deneyebilirsin.';
 
   @override
+  String get rewardAdLoading => 'REKLAM YÜKLENİYOR...';
+
+  @override
+  String get rewardAlreadyUsedDescription =>
+      'Bu denemede ek hamle hakkını kullandın. Yeniden başlat ve sıralamayı tekrar düşün.';
+
+  @override
   String get gamePaused => 'OYUN DURAKLATILDI';
 
   @override
@@ -136,6 +143,19 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get hintTooltip => 'İpucu';
+
+  @override
+  String get noHintsRemaining => 'Bu deneme için ipucu hakkın kalmadı.';
+
+  @override
+  String get hintRewardTitle => 'İPUCU HAKKI BİTTİ';
+
+  @override
+  String get hintRewardDescription =>
+      'Bu deneme için 2 ek ipucu almak üzere isteğe bağlı bir reklam izle.';
+
+  @override
+  String get watchAdHints => 'REKLAM İZLE  •  +2 İPUCU';
 
   @override
   String get pauseTooltip => 'Duraklat';
@@ -166,7 +186,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get failedDescription =>
-      'Sırayı yeniden düşün veya reklam izleyerek 3 ek hamle kazan.';
+      'Sırayı yeniden düşün veya isteğe bağlı tek reklam izleyip 3 ek hamleyle devam et.';
 
   @override
   String get allDoneDescription => 'Kaosu tamamen kontrol altına aldın.';
@@ -177,7 +197,7 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get watchAdBonus => 'REKLAM İZLE  •  +3 HAMLE';
+  String get watchAdBonus => 'REKLAM İZLE  •  +3 HAMLEYLE DEVAM';
 
   @override
   String get restart => 'YENİDEN BAŞLAT';
