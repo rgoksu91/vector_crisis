@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app/app_controller.dart';
+import 'config/app_config.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'services/ads_service.dart';
 import 'ui/design/app_theme.dart';
@@ -49,7 +50,7 @@ class _VectorCrisisAppState extends State<VectorCrisisApp> {
     await Future.wait([
       _controller.initialize(),
       minimumSplash,
-      if (widget.initializeAds) _ads.initialize(),
+      if (widget.initializeAds && !_controller.isTestMode) _ads.initialize(),
     ]);
   }
 
@@ -75,7 +76,7 @@ class _VectorCrisisAppState extends State<VectorCrisisApp> {
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) {
           final content = child ?? const SizedBox.shrink();
-          if (!_controller.isTestMode) return content;
+          if (!_controller.isTestMode || STORE_SCREENSHOT_MODE) return content;
           return Banner(
             message: AppLocalizations.of(context).testModeBanner,
             location: BannerLocation.topEnd,

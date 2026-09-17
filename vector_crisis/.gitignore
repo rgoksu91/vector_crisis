@@ -47,3 +47,8 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Store assets: keep the sources, not what compose_store_assets.sh produces.
+store_assets/**/screenshots/
+store_assets/**/deliverables/
+.DS_Store
