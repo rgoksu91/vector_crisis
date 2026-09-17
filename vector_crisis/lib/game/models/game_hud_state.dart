@@ -16,11 +16,13 @@ enum GameHudMessage {
   campaignCompleted,
   boardClear,
   moveLimitReached,
+  boardJammed,
   introTapArrow,
   introRotator,
   introFrozen,
   introBomb,
   introRotatorClockwise,
+  introStone,
 }
 
 @immutable

@@ -15,7 +15,7 @@
   "continueLevel": "CONTINUE  •  LEVEL {level}",
   "@continueLevel": {"placeholders": {"level": {"type": "int"}}},
   "selectLevel": "SELECT LEVEL",
-  "handcraftedPuzzles": "100 HANDCRAFTED PUZZLES",
+  "handcraftedPuzzles": "300 TRICKY PUZZLES",
   "completed": "COMPLETED",
   "stars": "STARS",
   "unlockedLevel": "UNLOCKED",
@@ -50,7 +50,7 @@
   "arrowsAndMoves": "{remaining} ARROWS  •  {moves}/{limit} MOVES",
   "@arrowsAndMoves": {"placeholders": {"remaining": {"type": "int"}, "moves": {"type": "int"}, "limit": {"type": "int"}}},
   "movesEnded": "OUT OF MOVES",
-  "allLevelsCompleted": "100 LEVELS COMPLETE",
+  "allLevelsCompleted": "300 LEVELS COMPLETE",
   "boardClear": "BOARD CLEAR",
   "failedDescription": "Rethink the order or watch an ad to earn 3 extra moves.",
   "allDoneDescription": "You brought the entire chaos under control.",
@@ -77,5 +77,9 @@
   "introRotator": "Orange: turns 90° when its path is blocked.",
   "introFrozen": "Frozen: thaws when an adjacent arrow leaves.",
   "introBomb": "Red bomb: blasts adjacent arrows.",
-  "introRotatorClockwise": "Orange turns clockwise while its path is blocked."
+  "introRotatorClockwise": "Orange turns clockwise while its path is blocked.",
+  "introStone": "Grey stone: slides to the first obstacle and becomes a wall. Mind where it lands!",
+  "boardJammed": "A wall closed the only way out.",
+  "boardJammedTitle": "Board jammed",
+  "boardJammedDescription": "A stone blocked a path for good. Change the order and try again."
 }

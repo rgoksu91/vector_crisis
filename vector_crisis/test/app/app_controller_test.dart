@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vector_crisis/app/app_controller.dart';
+import 'package:vector_crisis/game/data/levels.dart';
 
 void main() {
   test('progress, stars, selection and settings persist', () async {
@@ -47,10 +48,10 @@ void main() {
 
     expect(controller.isTestMode, isTrue);
     expect(controller.unlockedLevel, 1);
-    expect(controller.accessibleLevel, 100);
+    expect(controller.accessibleLevel, levels.length);
 
-    await controller.selectLevel(100);
-    expect(controller.lastLevel, 100);
+    await controller.selectLevel(levels.length);
+    expect(controller.lastLevel, levels.length);
     expect(controller.unlockedLevel, 1);
 
     final productionController = AppController();

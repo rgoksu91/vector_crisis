@@ -3,17 +3,39 @@ import 'dart:math' as math;
 
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'components/arrow_component.dart';
 import 'components/board_component.dart';
+import 'components/wall_component.dart';
 import 'data/levels.dart';
 import 'logic/board_rules.dart';
+import 'logic/level_solver.dart';
 import 'models/arrow_direction.dart';
+import 'models/arrow_seed.dart';
 import 'models/arrow_type.dart';
 import 'models/game_hud_state.dart';
 import 'models/level_data.dart';
+
+/// Levels where the in-game hints introduce a mechanic.
+abstract final class LevelPlanMarks {
+  static const firstStoneLevel = 12;
+}
+
+/// Matches the budget tool/generate_levels.dart solves every level within, so
+/// a hint from any shipped starting position never needs the greedy fallback.
+/// A hint is a single tap, so the worst case (tens of ms on desktop) is fine.
+const _hintStateBudget = 150000;
+
+bool _isJammed(LevelData position) {
+  final analysis = LevelSolver.analyze(
+    position,
+    maxVisitedStates: _hintStateBudget,
+  );
+  return !analysis.isSolvable && !analysis.hitStateLimit;
+}
 
 class ArrowChaosGame extends FlameGame {
   final int initialLevelIndex;
@@ -31,6 +53,11 @@ class ArrowChaosGame extends FlameGame {
   );
 
   final List<ArrowComponent> _arrows = [];
+  final Set<BoardCell> _walls = {};
+  bool _hasStones = false;
+
+  /// Bumped on every (re)load so late background results can be discarded.
+  int _attempt = 0;
 
   PositionComponent? _levelRoot;
   late LevelData _currentLevel;
@@ -67,7 +94,9 @@ class ArrowChaosGame extends FlameGame {
       return;
     }
 
-    final clear = canExit(arrow);
+    final isStone = arrow.type == ArrowType.stone;
+    final slide = isStone ? _slideSteps(arrow) : 0;
+    final clear = isStone ? slide > 0 : canExit(arrow);
 
     if (arrow.type == ArrowType.rotator && !clear) {
       _combo = 0;
@@ -76,6 +105,7 @@ class ArrowChaosGame extends FlameGame {
       _haptic(HapticFeedback.selectionClick);
       _setMessage(GameHudMessage.rotatorTurned);
       _publishHud();
+      _scheduleJamCheck();
       _checkMoveLimit();
       return;
     }
@@ -88,6 +118,16 @@ class ArrowChaosGame extends FlameGame {
       _setMessage(GameHudMessage.pathBlocked);
       _publishHud();
       _checkMoveLimit();
+      return;
+    }
+
+    if (isStone) {
+      _combo = 0;
+      _moves++;
+      _haptic(HapticFeedback.mediumImpact);
+      _setMessage(GameHudMessage.none);
+      _slideStone(arrow, slide);
+      _publishHud();
       return;
     }
 
@@ -109,15 +149,92 @@ class ArrowChaosGame extends FlameGame {
       direction: selected.direction,
       rows: _currentLevel.rows,
       columns: _currentLevel.columns,
-      occupiedCells: _arrows
-          .where((arrow) => arrow != selected && !arrow.isMoving)
-          .map((arrow) => (row: arrow.row, column: arrow.column)),
+      occupiedCells: _occupiedExcept(selected),
     );
   }
 
-  void showHint() {
-    if (_levelLocked) return;
+  Iterable<BoardCell> _occupiedExcept(ArrowComponent selected) => _arrows
+      .where((arrow) => arrow != selected && !arrow.isMoving)
+      .map<BoardCell>((arrow) => (row: arrow.row, column: arrow.column))
+      .followedBy(_walls);
 
+  /// Cells a Stone would travel before hitting an arrow, a wall or the edge.
+  int _slideSteps(ArrowComponent stone) {
+    final occupied = _occupiedExcept(stone).toSet();
+    var steps = 0;
+    var row = stone.row + stone.direction.rowDelta;
+    var column = stone.column + stone.direction.columnDelta;
+    while (BoardRules.isInside(
+          row,
+          column,
+          _currentLevel.rows,
+          _currentLevel.columns,
+        ) &&
+        !occupied.contains((row: row, column: column))) {
+      steps++;
+      row += stone.direction.rowDelta;
+      column += stone.direction.columnDelta;
+    }
+    return steps;
+  }
+
+  void showHint() {
+    if (_levelLocked || _actionInProgress) return;
+
+    // The first exitable arrow is exactly how an unplanned player loses, so
+    // the hint follows the solver from the current position instead.
+    final candidate = _solverHint() ?? _greedyHint();
+
+    if (candidate == null) {
+      _setMessage(GameHudMessage.noAvailableMove);
+      return;
+    }
+
+    candidate.playHint();
+    _haptic(HapticFeedback.selectionClick);
+    _setMessage(
+      candidate.type == ArrowType.rotator && !canExit(candidate)
+          ? GameHudMessage.hintRotate
+          : GameHudMessage.hintMarked,
+    );
+  }
+
+  ArrowComponent? _solverHint() {
+    final pieces = _pieces();
+    if (pieces.isEmpty) return null;
+    final solution = LevelSolver.analyze(
+      _snapshot(pieces),
+      maxVisitedStates: _hintStateBudget,
+    ).solution;
+    if (solution == null || solution.isEmpty) return null;
+    return pieces[solution.first.arrowId];
+  }
+
+  List<ArrowComponent> _pieces() =>
+      _arrows.where((arrow) => !arrow.isMoving).toList();
+
+  /// The live position as a level the solver can read. A thawed Frozen arrow
+  /// behaves exactly like a normal one, a Rotator's turns are carried by its
+  /// current direction, and landed Stones become fixed walls.
+  LevelData _snapshot(List<ArrowComponent> pieces) => LevelData(
+    id: _currentLevel.id,
+    rows: _currentLevel.rows,
+    columns: _currentLevel.columns,
+    walls: _walls.toList(),
+    arrows: [
+      for (final arrow in pieces)
+        ArrowSeed(
+          row: arrow.row,
+          column: arrow.column,
+          direction: arrow.direction,
+          type: arrow.type == ArrowType.frozen && !arrow.frozen
+              ? ArrowType.normal
+              : arrow.type,
+        ),
+    ],
+  );
+
+  ArrowComponent? _greedyHint() {
     ArrowComponent? candidate;
     for (final arrow in _arrows) {
       if (!arrow.isMoving && !arrow.frozen && canExit(arrow)) {
@@ -136,19 +253,7 @@ class ArrowChaosGame extends FlameGame {
         }
       }
     }
-
-    if (candidate == null) {
-      _setMessage(GameHudMessage.noAvailableMove);
-      return;
-    }
-
-    candidate.playHint();
-    _haptic(HapticFeedback.selectionClick);
-    _setMessage(
-      candidate.type == ArrowType.rotator && !canExit(candidate)
-          ? GameHudMessage.hintRotate
-          : GameHudMessage.hintMarked,
-    );
+    return candidate;
   }
 
   void restartLevel() {
@@ -157,6 +262,8 @@ class ArrowChaosGame extends FlameGame {
 
   void grantBonusMoves(int amount) {
     if (hud.value.phase != GamePhase.failed || amount <= 0) return;
+    // Extra moves cannot unjam a board; only a restart can.
+    if (hud.value.message == GameHudMessage.boardJammed) return;
     _moveLimit = (_moveLimit ?? _moves) + amount;
     _levelLocked = false;
     _combo = 0;
@@ -191,6 +298,11 @@ class ArrowChaosGame extends FlameGame {
     _levelLocked = false;
     _actionInProgress = false;
     _arrows.clear();
+    _walls.clear();
+    _attempt++;
+    _hasStones = _currentLevel.arrows.any(
+      (arrow) => arrow.type == ArrowType.stone,
+    );
 
     _levelRoot?.removeFromParent();
 
@@ -264,7 +376,56 @@ class ArrowChaosGame extends FlameGame {
       _thawFrozenNear({(originalRow, originalColumn)});
       _actionInProgress = false;
       _publishHud();
+      _scheduleJamCheck();
       _checkLevelCompletedOrFailed();
+    });
+  }
+
+  void _slideStone(ArrowComponent stone, int steps) {
+    _actionInProgress = true;
+    final originalRow = stone.row;
+    final originalColumn = stone.column;
+    final wallRow = stone.row + stone.direction.rowDelta * steps;
+    final wallColumn = stone.column + stone.direction.columnDelta * steps;
+    final target = Vector2(wallColumn * _cellSize, wallRow * _cellSize);
+
+    stone.startFlight(target, () {
+      _arrows.remove(stone);
+      stone.removeFromParent();
+      _walls.add((row: wallRow, column: wallColumn));
+      _levelRoot?.add(
+        WallComponent(row: wallRow, column: wallColumn, cellSize: _cellSize),
+      );
+      _haptic(HapticFeedback.heavyImpact);
+      _thawFrozenNear({(originalRow, originalColumn)});
+      _actionInProgress = false;
+      _publishHud();
+      _scheduleJamCheck();
+      _checkLevelCompletedOrFailed();
+    });
+  }
+
+  /// Stones are the only thing that can make a board unsolvable, so on a
+  /// level that has them the position is checked after every move and the
+  /// run ends as soon as it is lost, instead of letting the player burn the
+  /// rest of the move budget. The search runs off the UI thread; a jam is
+  /// permanent, so a result that arrives a few taps late is still true as
+  /// long as the same attempt is running.
+  void _scheduleJamCheck() {
+    if (!_hasStones || _levelLocked || _arrows.isEmpty) return;
+    final attempt = _attempt;
+    compute(_isJammed, _snapshot(_pieces())).then((jammed) {
+      if (!jammed || attempt != _attempt || _levelLocked) return;
+      if (_arrows.isEmpty) return;
+      _levelLocked = true;
+      _combo = 0;
+      _haptic(HapticFeedback.heavyImpact);
+      hud.value = hud.value.copyWith(
+        combo: 0,
+        moves: _moves,
+        phase: GamePhase.failed,
+        message: GameHudMessage.boardJammed,
+      );
     });
   }
 
@@ -274,6 +435,7 @@ class ArrowChaosGame extends FlameGame {
           (arrow) =>
               arrow != bomb &&
               !arrow.isMoving &&
+              arrow.type != ArrowType.stone &&
               _isAdjacent(originalRow, originalColumn, arrow.row, arrow.column),
         )
         .toList(growable: false);
@@ -293,6 +455,7 @@ class ArrowChaosGame extends FlameGame {
     _thawFrozenNear(removedCells);
     _actionInProgress = false;
     _publishHud();
+    _scheduleJamCheck();
 
     Future<void>.delayed(
       const Duration(milliseconds: 240),
@@ -398,6 +561,7 @@ class ArrowChaosGame extends FlameGame {
     6 => GameHudMessage.introRotator,
     8 => GameHudMessage.introFrozen,
     10 => GameHudMessage.introBomb,
+    LevelPlanMarks.firstStoneLevel => GameHudMessage.introStone,
     16 => GameHudMessage.introRotatorClockwise,
     _ => GameHudMessage.none,
   };

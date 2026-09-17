@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_crisis/game/data/levels.dart';
 import 'package:vector_crisis/game/logic/board_rules.dart';
+import 'package:vector_crisis/game/logic/level_difficulty.dart';
 import 'package:vector_crisis/game/logic/level_solver.dart';
 import 'package:vector_crisis/game/models/arrow_direction.dart';
 import 'package:vector_crisis/game/models/arrow_seed.dart';
@@ -8,92 +9,18 @@ import 'package:vector_crisis/game/models/arrow_type.dart';
 import 'package:vector_crisis/game/models/level_data.dart';
 
 void main() {
-  test(
-    'Levels 1-9 remain byte-for-byte compatible with the original layouts',
-    () {
-      expect(_baselineFingerprint(), 1121777089);
-    },
-  );
-
-  test('Levels 10-20 meet the branching and efficiency difficulty floor', () {
-    const expectedMetrics = <int, (int minimumMoves, int initialMoves)>{
-      10: (6, 4),
-      11: (7, 3),
-      12: (10, 2),
-      13: (8, 3),
-      14: (11, 4),
-      15: (12, 4),
-      16: (11, 4),
-      17: (12, 4),
-      18: (13, 4),
-      19: (13, 4),
-      20: (14, 4),
-    };
-
-    for (final level in levels.skip(9).take(11)) {
-      final analysis = LevelSolver.analyze(level);
-      final expected = expectedMetrics[level.id]!;
-
-      expect(analysis.minimumMoves, expected.$1, reason: 'Level ${level.id}');
-      expect(
-        analysis.initialPlayableMoves,
-        expected.$2,
-        reason: 'Level ${level.id}',
-      );
-      expect(
-        analysis.initialPlayableMoves,
-        inInclusiveRange(2, 4),
-        reason: 'Level ${level.id} should open with meaningful alternatives.',
-      );
-      expect(
-        analysis.decisionStates,
-        greaterThanOrEqualTo(3),
-        reason: 'Level ${level.id} is too scripted.',
-      );
-      expect(
-        analysis.maxForcedMoveStreak,
-        lessThanOrEqualTo(3),
-        reason: 'Level ${level.id} has a long forced-move sequence.',
-      );
-      expect(
-        analysis.playableMovesAlongSolution,
-        hasLength(analysis.minimumMoves!),
-      );
-    }
-
-    for (final level in levels.skip(15).take(5)) {
-      expect(
-        LevelSolver.analyze(level).minimumMoves,
-        inInclusiveRange(11, 16),
-        reason: 'Level ${level.id} misses the 45-90 second depth proxy.',
-      );
-    }
-  });
-
-  test('Levels 10-100 reject long scripted solution corridors', () {
-    for (final level in levels.skip(9)) {
-      final analysis = LevelSolver.analyze(level);
-      expect(
-        analysis.decisionStates,
-        greaterThanOrEqualTo(2),
-        reason: 'Level ${level.id} has fewer than two decision states.',
-      );
-      expect(
-        analysis.maxForcedMoveStreak,
-        lessThanOrEqualTo(4),
-        reason: 'Level ${level.id} stays forced for too long.',
-      );
-    }
-  });
+  final analyses = {
+    for (final level in levels) level.id: LevelSolver.analyze(level),
+  };
 
   test('the level catalog is structurally valid', () {
-    expect(levels, hasLength(100));
+    expect(levels, hasLength(300));
 
     for (var index = 0; index < levels.length; index++) {
       final level = levels[index];
       expect(level.id, index + 1, reason: 'Level IDs must be sequential.');
-      expect(level.rows, inInclusiveRange(3, 6));
-      expect(level.columns, inInclusiveRange(3, 6));
+      expect(level.rows, inInclusiveRange(3, 8));
+      expect(level.columns, inInclusiveRange(3, 8));
       expect(level.arrows, isNotEmpty);
 
       final cells = <BoardCell>{};
@@ -117,322 +44,114 @@ void main() {
     }
   });
 
-  test(
-    'every move-limited level can be solved inside its efficiency budget',
-    () {
-      for (final level in levels.where((level) => level.moveLimit != null)) {
-        final minimumMoves = LevelSolver.analyze(level).minimumMoves;
-        expect(
-          level.targetMoves,
-          minimumMoves,
-          reason: 'Level ${level.id} target is not the solver optimum.',
-        );
-        expect(
-          minimumMoves,
-          lessThanOrEqualTo(level.moveLimit!),
-          reason: 'Level ${level.id} cannot fit its move budget.',
-        );
-      }
-    },
-  );
+  test('the tutorial levels keep their original layouts', () {
+    expect(_fingerprint(levels.take(3)), _tutorialFingerprint);
+  });
 
-  test('the Rotator arc follows its design constraints', () {
-    final signatures = <String>{};
-
-    for (final level in levels.skip(15).take(10)) {
-      final analysis = LevelSolver.analyze(level);
-      final rotators = level.arrows
-          .where((arrow) => arrow.type == ArrowType.rotator)
-          .length;
-      final normals = level.arrows
-          .where((arrow) => arrow.type == ArrowType.normal)
-          .length;
-      final signature = _levelSignature(level);
-
-      expect(level.id, inInclusiveRange(16, 25));
-      expect(level.difficulty, inInclusiveRange(2, 6));
-      expect(level.targetMoves, isNotNull);
-      expect(rotators, inInclusiveRange(1, 4));
-      expect(normals / level.arrows.length, greaterThanOrEqualTo(0.6));
+  test('every level from 4 on is scored against the solver optimum', () {
+    for (final level in levels.skip(3)) {
+      final analysis = analyses[level.id]!;
+      expect(analysis.hitStateLimit, isFalse, reason: 'Level ${level.id}');
       expect(
-        level.arrows.every(
-          (arrow) =>
-              arrow.type == ArrowType.normal || arrow.type == ArrowType.rotator,
-        ),
-        isTrue,
+        level.targetMoves,
+        analysis.minimumMoves,
+        reason: 'Level ${level.id} target is not the solver optimum.',
       );
-      expect(analysis.isSolvable, isTrue);
-      expect(analysis.hitStateLimit, isFalse);
-      expect(analysis.initialPlayableMoves, inInclusiveRange(1, 6));
+      expect(level.moveLimit, greaterThan(level.targetMoves!));
       expect(
-        analysis.solution!.any(
+        level.twoStarMoves,
+        inInclusiveRange(level.targetMoves! + 1, level.moveLimit!),
+      );
+    }
+  });
+
+  test('the campaign never gets shorter from one level to the next', () {
+    for (var index = 4; index < levels.length; index++) {
+      expect(
+        levels[index].targetMoves,
+        greaterThanOrEqualTo(levels[index - 1].targetMoves!),
+        reason: 'Level ${levels[index].id} is easier than the one before it.',
+      );
+    }
+    expect(levels.last.targetMoves, greaterThanOrEqualTo(30));
+  });
+
+  test('every generated level opens with a real choice', () {
+    for (final level in levels.skip(3)) {
+      final maxOpenings = switch (level.rows) {
+        <= 6 => 4,
+        7 => 5,
+        _ => 6,
+      };
+      expect(
+        analyses[level.id]!.initialExitOptions,
+        inInclusiveRange(2, maxOpenings),
+        reason: 'Level ${level.id}',
+      );
+    }
+  });
+
+  test('mechanics arrive on the schedule the hints announce', () {
+    bool has(LevelData level, ArrowType type) =>
+        level.arrows.any((arrow) => arrow.type == type);
+
+    for (final level in levels.skip(5)) {
+      expect(has(level, ArrowType.rotator), isTrue, reason: '${level.id}');
+    }
+    for (final level in levels.skip(7)) {
+      expect(has(level, ArrowType.frozen), isTrue, reason: '${level.id}');
+    }
+    for (final level in levels.skip(9)) {
+      expect(has(level, ArrowType.bomb), isTrue, reason: '${level.id}');
+    }
+    for (final level in levels.take(11)) {
+      expect(has(level, ArrowType.stone), isFalse, reason: '${level.id}');
+    }
+    for (final level in levels.skip(11)) {
+      expect(has(level, ArrowType.stone), isTrue, reason: '${level.id}');
+    }
+    for (final level in levels.skip(5).take(4)) {
+      expect(
+        analyses[level.id]!.solution!.any(
           (action) => action.type == SolverActionType.rotateClockwise,
         ),
         isTrue,
-        reason: 'Level ${level.id} does not require its Rotator mechanic.',
-      );
-      expect(
-        (analysis.minimumMoves! - level.targetMoves!).abs(),
-        lessThanOrEqualTo(2),
-        reason: 'Level ${level.id} targetMoves is not calibrated.',
-      );
-      expect(
-        signatures.add(signature),
-        isTrue,
-        reason: 'Level ${level.id} duplicates an earlier Rotator board.',
+        reason: 'Level ${level.id} never needs its Rotator turned.',
       );
     }
   });
 
-  test('the Frozen arc follows its design constraints', () {
-    final signatures = <String>{};
-
-    for (final level in levels.skip(25).take(10)) {
-      final analysis = LevelSolver.analyze(level);
-      final frozen = level.arrows
-          .where((arrow) => arrow.type == ArrowType.frozen)
-          .length;
-      final normals = level.arrows
-          .where((arrow) => arrow.type == ArrowType.normal)
-          .length;
-
-      expect(level.id, inInclusiveRange(26, 35));
-      expect(level.difficulty, inInclusiveRange(2, 5));
-      expect(level.targetMoves, isNotNull);
-      expect(frozen, inInclusiveRange(1, 4));
-      expect(normals / level.arrows.length, greaterThanOrEqualTo(0.6));
-      expect(
-        level.arrows.any((arrow) => arrow.type == ArrowType.bomb),
-        isFalse,
-      );
-      expect(analysis.isSolvable, isTrue);
-      expect(analysis.hitStateLimit, isFalse);
-      expect(analysis.initialPlayableMoves, inInclusiveRange(1, 7));
-      expect(
-        (analysis.minimumMoves! - level.targetMoves!).abs(),
-        lessThanOrEqualTo(2),
-        reason: 'Level ${level.id} targetMoves is not calibrated.',
+  // The shipped catalog before the rebuild handed three stars to unplanned
+  // play on three levels out of four. This keeps that from coming back.
+  test('from level 10 on, unplanned play is punished', () {
+    for (final level in levels.skip(9)) {
+      final report = LevelDifficulty.measure(
+        level,
+        samples: 240,
+        minimumMoves: level.targetMoves,
       );
       expect(
-        signatures.add(_levelSignature(level)),
-        isTrue,
-        reason: 'Level ${level.id} duplicates an earlier Frozen board.',
+        report.sensibleOptimalRate,
+        lessThanOrEqualTo(0.55),
+        reason: 'Level ${level.id} gives three stars without planning.',
+      );
+      expect(
+        report.sensibleFailureRate,
+        greaterThanOrEqualTo(0.05),
+        reason: 'Level ${level.id} cannot be lost without planning.',
+      );
+      if (level.id < 12) continue;
+      expect(
+        report.sensibleStuckRate,
+        greaterThanOrEqualTo(0.15),
+        reason: 'Level ${level.id} has a Stone that never jams the board.',
+      );
+      expect(
+        report.carefulFailureRate,
+        greaterThanOrEqualTo(0.08),
+        reason: 'Level ${level.id} falls to one move of lookahead.',
       );
     }
-  });
-
-  test('the Bomb arc follows its design constraints', () {
-    final signatures = <String>{};
-
-    for (final level in levels.skip(35).take(10)) {
-      final analysis = LevelSolver.analyze(level);
-      final bombs = level.arrows
-          .where((arrow) => arrow.type == ArrowType.bomb)
-          .length;
-      final normals = level.arrows
-          .where((arrow) => arrow.type == ArrowType.normal)
-          .length;
-
-      expect(level.id, inInclusiveRange(36, 45));
-      expect(level.difficulty, inInclusiveRange(2, 5));
-      expect(level.targetMoves, isNotNull);
-      expect(bombs, inInclusiveRange(1, 3));
-      expect(normals / level.arrows.length, greaterThanOrEqualTo(0.6));
-      expect(analysis.isSolvable, isTrue);
-      expect(analysis.hitStateLimit, isFalse);
-      expect(analysis.initialPlayableMoves, inInclusiveRange(1, 9));
-      expect(
-        analysis.solution!.any(
-          (action) => level.arrows[action.arrowId].type == ArrowType.bomb,
-        ),
-        isTrue,
-        reason: 'Level ${level.id} does not use its Bomb mechanic.',
-      );
-      expect(
-        (analysis.minimumMoves! - level.targetMoves!).abs(),
-        lessThanOrEqualTo(2),
-        reason: 'Level ${level.id} targetMoves is not calibrated.',
-      );
-      expect(
-        signatures.add(_levelSignature(level)),
-        isTrue,
-        reason: 'Level ${level.id} duplicates an earlier Bomb board.',
-      );
-    }
-  });
-
-  test('the Mixed arc follows its design constraints', () {
-    final signatures = <String>{};
-
-    for (final level in levels.skip(45).take(15)) {
-      final analysis = LevelSolver.analyze(level);
-      final specials = level.arrows
-          .where((arrow) => arrow.type != ArrowType.normal)
-          .length;
-      final rotators = level.arrows
-          .where((arrow) => arrow.type == ArrowType.rotator)
-          .length;
-      final bombs = level.arrows
-          .where((arrow) => arrow.type == ArrowType.bomb)
-          .length;
-
-      expect(level.id, inInclusiveRange(46, 60));
-      expect(level.difficulty, inInclusiveRange(4, 7));
-      expect(level.targetMoves, isNotNull);
-      expect(rotators, lessThanOrEqualTo(4));
-      expect(bombs, lessThanOrEqualTo(3));
-      expect(1 - specials / level.arrows.length, greaterThanOrEqualTo(0.6));
-      expect(analysis.isSolvable, isTrue);
-      expect(analysis.hitStateLimit, isFalse);
-      expect(analysis.initialPlayableMoves, inInclusiveRange(1, 9));
-      expect(
-        (analysis.minimumMoves! - level.targetMoves!).abs(),
-        lessThanOrEqualTo(3),
-        reason: 'Level ${level.id} targetMoves is not calibrated.',
-      );
-      expect(
-        signatures.add(_levelSignature(level)),
-        isTrue,
-        reason: 'Level ${level.id} duplicates an earlier Mixed board.',
-      );
-    }
-  });
-
-  test('the Dense arc follows its design constraints', () {
-    final signatures = <String>{};
-
-    for (final level in levels.skip(60).take(15)) {
-      final analysis = LevelSolver.analyze(level);
-      final normals = level.arrows
-          .where((arrow) => arrow.type == ArrowType.normal)
-          .length;
-      final rotators = level.arrows
-          .where((arrow) => arrow.type == ArrowType.rotator)
-          .length;
-      final bombs = level.arrows
-          .where((arrow) => arrow.type == ArrowType.bomb)
-          .length;
-
-      expect(level.id, inInclusiveRange(61, 75));
-      expect(level.rows, 6);
-      expect(level.columns, 6);
-      expect(level.difficulty, inInclusiveRange(4, 7));
-      expect(level.arrows.length, inInclusiveRange(12, 22));
-      expect(normals / level.arrows.length, greaterThanOrEqualTo(0.6));
-      expect(rotators, lessThanOrEqualTo(4));
-      expect(bombs, lessThanOrEqualTo(3));
-      expect(analysis.isSolvable, isTrue);
-      expect(analysis.hitStateLimit, isFalse);
-      expect(analysis.initialPlayableMoves, inInclusiveRange(1, 9));
-      expect(
-        (analysis.minimumMoves! - level.targetMoves!).abs(),
-        lessThanOrEqualTo(2),
-        reason: 'Level ${level.id} targetMoves is not calibrated.',
-      );
-      expect(
-        signatures.add(_levelSignature(level)),
-        isTrue,
-        reason: 'Level ${level.id} duplicates an earlier Dense board.',
-      );
-    }
-  });
-
-  test('the Advanced arc follows its design constraints', () {
-    final signatures = <String>{};
-
-    for (final level in levels.skip(75).take(15)) {
-      final analysis = LevelSolver.analyze(level);
-      final normals = level.arrows
-          .where((arrow) => arrow.type == ArrowType.normal)
-          .length;
-      final rotators = level.arrows
-          .where((arrow) => arrow.type == ArrowType.rotator)
-          .length;
-      final bombs = level.arrows
-          .where((arrow) => arrow.type == ArrowType.bomb)
-          .length;
-
-      expect(level.id, inInclusiveRange(76, 90));
-      expect(level.rows, 6);
-      expect(level.columns, 6);
-      expect(level.difficulty, inInclusiveRange(4, 8));
-      expect(level.arrows.length, inInclusiveRange(12, 24));
-      expect(normals / level.arrows.length, greaterThanOrEqualTo(0.6));
-      expect(rotators, lessThanOrEqualTo(4));
-      expect(bombs, lessThanOrEqualTo(3));
-      expect(analysis.isSolvable, isTrue);
-      expect(analysis.hitStateLimit, isFalse);
-      expect(analysis.initialPlayableMoves, inInclusiveRange(1, 11));
-      expect(
-        (analysis.minimumMoves! - level.targetMoves!).abs(),
-        lessThanOrEqualTo(2),
-        reason: 'Level ${level.id} targetMoves is not calibrated.',
-      );
-      expect(
-        signatures.add(_levelSignature(level)),
-        isTrue,
-        reason: 'Level ${level.id} duplicates an earlier Advanced board.',
-      );
-    }
-  });
-
-  test('the Mastery arc follows its design constraints', () {
-    final signatures = <String>{};
-
-    for (final level in levels.skip(90).take(10)) {
-      final analysis = LevelSolver.analyze(level);
-      final normals = level.arrows
-          .where((arrow) => arrow.type == ArrowType.normal)
-          .length;
-      final rotators = level.arrows
-          .where((arrow) => arrow.type == ArrowType.rotator)
-          .length;
-      final frozen = level.arrows
-          .where((arrow) => arrow.type == ArrowType.frozen)
-          .length;
-      final bombs = level.arrows
-          .where((arrow) => arrow.type == ArrowType.bomb)
-          .length;
-
-      expect(level.id, inInclusiveRange(91, 100));
-      expect(level.rows, 6);
-      expect(level.columns, 6);
-      expect(level.difficulty, inInclusiveRange(5, 8));
-      expect(normals / level.arrows.length, greaterThanOrEqualTo(0.6));
-      expect(rotators, lessThanOrEqualTo(4));
-      expect(frozen, lessThanOrEqualTo(4));
-      expect(bombs, lessThanOrEqualTo(3));
-      expect(analysis.isSolvable, isTrue);
-      expect(analysis.hitStateLimit, isFalse);
-      expect(analysis.initialPlayableMoves, inInclusiveRange(1, 9));
-      expect(
-        (analysis.minimumMoves! - level.targetMoves!).abs(),
-        lessThanOrEqualTo(2),
-        reason: 'Level ${level.id} targetMoves is not calibrated.',
-      );
-      expect(
-        signatures.add(_levelSignature(level)),
-        isTrue,
-        reason: 'Level ${level.id} duplicates an earlier Mastery board.',
-      );
-    }
-
-    final finalLevel = levels.last;
-    expect(finalLevel.arrows.length, inInclusiveRange(20, 26));
-    expect(
-      finalLevel.arrows
-          .where((arrow) => arrow.type == ArrowType.rotator)
-          .length,
-      inInclusiveRange(2, 4),
-    );
-    expect(
-      finalLevel.arrows.where((arrow) => arrow.type == ArrowType.frozen).length,
-      inInclusiveRange(2, 4),
-    );
-    expect(
-      finalLevel.arrows.where((arrow) => arrow.type == ArrowType.bomb).length,
-      inInclusiveRange(1, 3),
-    );
   });
 
   test('the complete catalog has no exact duplicate boards', () {
@@ -573,9 +292,11 @@ void main() {
   });
 }
 
-int _baselineFingerprint() {
+const _tutorialFingerprint = 1018013165;
+
+int _fingerprint(Iterable<LevelData> levels) {
   var fingerprint = 17;
-  for (final level in levels.take(9)) {
+  for (final level in levels) {
     fingerprint = _mix(fingerprint, level.id);
     fingerprint = _mix(fingerprint, level.rows);
     fingerprint = _mix(fingerprint, level.columns);
@@ -608,10 +329,12 @@ class _GameplaySimulation {
   final int rows;
   final int columns;
   final List<_GameplayArrow> arrows;
+  final Set<BoardCell> walls;
 
   _GameplaySimulation(LevelData level)
     : rows = level.rows,
       columns = level.columns,
+      walls = level.walls.toSet(),
       arrows = [
         for (var index = 0; index < level.arrows.length; index++)
           _GameplayArrow.fromSeed(index, level.arrows[index]),
@@ -627,10 +350,34 @@ class _GameplaySimulation {
       direction: arrow.direction,
       rows: rows,
       columns: columns,
-      occupiedCells: arrows.map(
-        (arrow) => (row: arrow.row, column: arrow.column),
-      ),
+      occupiedCells: _occupied(),
     );
+
+    if (action.type == SolverActionType.slide) {
+      expect(arrow.type, ArrowType.stone);
+      final occupied = _occupied().toSet();
+      var row = arrow.row;
+      var column = arrow.column;
+      while (true) {
+        final nextRow = row + arrow.direction.rowDelta;
+        final nextColumn = column + arrow.direction.columnDelta;
+        if (!BoardRules.isInside(nextRow, nextColumn, rows, columns) ||
+            occupied.contains((row: nextRow, column: nextColumn))) {
+          break;
+        }
+        row = nextRow;
+        column = nextColumn;
+      }
+      expect(
+        (row, column),
+        isNot((arrow.row, arrow.column)),
+        reason: 'A Stone with no room was slid.',
+      );
+      walls.add((row: row, column: column));
+      _remove({(row: arrow.row, column: arrow.column)});
+      return;
+    }
+    expect(arrow.type, isNot(ArrowType.stone));
 
     if (action.type == SolverActionType.rotateClockwise) {
       expect(arrow.type, ArrowType.rotator);
@@ -643,17 +390,26 @@ class _GameplaySimulation {
     final removed = <BoardCell>{(row: arrow.row, column: arrow.column)};
     if (arrow.type == ArrowType.bomb) {
       for (final other in arrows) {
-        if (BoardRules.areAdjacent(
-          arrow.row,
-          arrow.column,
-          other.row,
-          other.column,
-        )) {
+        if (other.type != ArrowType.stone &&
+            BoardRules.areAdjacent(
+              arrow.row,
+              arrow.column,
+              other.row,
+              other.column,
+            )) {
           removed.add((row: other.row, column: other.column));
         }
       }
     }
 
+    _remove(removed);
+  }
+
+  Iterable<BoardCell> _occupied() => arrows
+      .map<BoardCell>((arrow) => (row: arrow.row, column: arrow.column))
+      .followedBy(walls);
+
+  void _remove(Set<BoardCell> removed) {
     arrows.removeWhere(
       (arrow) => removed.contains((row: arrow.row, column: arrow.column)),
     );

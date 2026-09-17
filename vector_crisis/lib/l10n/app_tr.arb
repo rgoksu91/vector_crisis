@@ -14,7 +14,7 @@
   "newGame": "YENİ OYUN",
   "continueLevel": "DEVAM ET  •  BÖLÜM {level}",
   "selectLevel": "BÖLÜM SEÇ",
-  "handcraftedPuzzles": "100 EL YAPIMI BULMACA",
+  "handcraftedPuzzles": "300 ZORLU BULMACA",
   "completed": "TAMAMLANDI",
   "stars": "YILDIZ",
   "unlockedLevel": "AÇIK BÖLÜM",
@@ -46,7 +46,7 @@
   "arrowsRemaining": "{count} OK KALDI",
   "arrowsAndMoves": "{remaining} OK  •  {moves}/{limit} HAMLE",
   "movesEnded": "HAMLE BİTTİ",
-  "allLevelsCompleted": "100 BÖLÜM TAMAMLANDI",
+  "allLevelsCompleted": "300 BÖLÜM TAMAMLANDI",
   "boardClear": "TAHTA TEMİZ",
   "failedDescription": "Sırayı yeniden düşün veya reklam izleyerek 3 ek hamle kazan.",
   "allDoneDescription": "Kaosu tamamen kontrol altına aldın.",
@@ -70,5 +70,9 @@
   "introRotator": "Turuncu: önü kapalıysa 90° döner.",
   "introFrozen": "Buzlu ok: komşu ok çıkınca çözülür.",
   "introBomb": "Kırmızı bomba: komşuları patlatır.",
-  "introRotatorClockwise": "Turuncu ok önü kapalıyken saat yönünde döner."
+  "introRotatorClockwise": "Turuncu ok önü kapalıyken saat yönünde döner.",
+  "introStone": "Gri taş: ilk engele kadar kayar ve duvar olur. Nereye düşeceğine dikkat!",
+  "boardJammed": "Bir duvar tek çıkış yolunu kapattı.",
+  "boardJammedTitle": "Tahta tıkandı",
+  "boardJammedDescription": "Bir taş yolu kalıcı olarak kapattı. Sırayı değiştirip yeniden dene."
 }

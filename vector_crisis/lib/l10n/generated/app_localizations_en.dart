@@ -56,7 +56,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectLevel => 'SELECT LEVEL';
 
   @override
-  String get handcraftedPuzzles => '100 HANDCRAFTED PUZZLES';
+  String get handcraftedPuzzles => '300 TRICKY PUZZLES';
 
   @override
   String get completed => 'COMPLETED';
@@ -167,7 +167,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get movesEnded => 'OUT OF MOVES';
 
   @override
-  String get allLevelsCompleted => '100 LEVELS COMPLETE';
+  String get allLevelsCompleted => '300 LEVELS COMPLETE';
 
   @override
   String get boardClear => 'BOARD CLEAR';
@@ -249,4 +249,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get introRotatorClockwise =>
       'Orange turns clockwise while its path is blocked.';
+
+  @override
+  String get introStone =>
+      'Grey stone: slides to the first obstacle and becomes a wall. Mind where it lands!';
+
+  @override
+  String get boardJammed => 'A wall closed the only way out.';
+
+  @override
+  String get boardJammedTitle => 'Board jammed';
+
+  @override
+  String get boardJammedDescription =>
+      'A stone blocked a path for good. Change the order and try again.';
 }

@@ -50,12 +50,15 @@ class AppController extends ChangeNotifier {
 
   int? bestMovesFor(int level) => _bestMoves[level];
 
+  /// Three stars are reserved for the solver optimum, so a clean run is a
+  /// deliberate result rather than a side effect of clearing the board.
   int starsFor(int level) {
     final best = _bestMoves[level];
-    final target = levels[level - 1].targetMoves;
+    final data = levels[level - 1];
+    final target = data.targetMoves;
     if (best == null) return 0;
     if (target == null || best <= target) return 3;
-    if (best <= target + 1) return 2;
+    if (best <= data.twoStarMoves!) return 2;
     return 1;
   }
 

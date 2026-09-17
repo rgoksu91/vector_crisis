@@ -1,4 +1,6 @@
-enum ArrowType { normal, rotator, frozen, bomb }
+/// A Stone never leaves the board: tapped, it slides to the first obstacle
+/// (or the edge) and turns into a permanent wall there.
+enum ArrowType { normal, rotator, frozen, bomb, stone }
 
 extension ArrowTypeX on ArrowType {
   String get badge => switch (this) {
@@ -6,5 +8,6 @@ extension ArrowTypeX on ArrowType {
     ArrowType.rotator => '↻',
     ArrowType.frozen => '❄',
     ArrowType.bomb => '●',
+    ArrowType.stone => '■',
   };
 }

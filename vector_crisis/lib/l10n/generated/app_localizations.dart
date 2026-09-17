@@ -185,7 +185,7 @@ abstract class AppLocalizations {
   /// No description provided for @handcraftedPuzzles.
   ///
   /// In en, this message translates to:
-  /// **'100 HANDCRAFTED PUZZLES'**
+  /// **'300 TRICKY PUZZLES'**
   String get handcraftedPuzzles;
 
   /// No description provided for @completed.
@@ -377,7 +377,7 @@ abstract class AppLocalizations {
   /// No description provided for @allLevelsCompleted.
   ///
   /// In en, this message translates to:
-  /// **'100 LEVELS COMPLETE'**
+  /// **'300 LEVELS COMPLETE'**
   String get allLevelsCompleted;
 
   /// No description provided for @boardClear.
@@ -523,6 +523,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Orange turns clockwise while its path is blocked.'**
   String get introRotatorClockwise;
+
+  /// No description provided for @introStone.
+  ///
+  /// In en, this message translates to:
+  /// **'Grey stone: slides to the first obstacle and becomes a wall. Mind where it lands!'**
+  String get introStone;
+
+  /// No description provided for @boardJammed.
+  ///
+  /// In en, this message translates to:
+  /// **'A wall closed the only way out.'**
+  String get boardJammed;
+
+  /// No description provided for @boardJammedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Board jammed'**
+  String get boardJammedTitle;
+
+  /// No description provided for @boardJammedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'A stone blocked a path for good. Change the order and try again.'**
+  String get boardJammedDescription;
 }
 
 class _AppLocalizationsDelegate

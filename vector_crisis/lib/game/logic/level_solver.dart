@@ -1,11 +1,11 @@
 import 'dart:collection';
 
-import 'board_rules.dart';
-import '../models/arrow_direction.dart';
+import 'board_engine.dart';
 import '../models/arrow_type.dart';
 import '../models/level_data.dart';
 
-enum SolverActionType { rotateClockwise, exit }
+/// A Stone's tap is a [slide]: it ends as a wall rather than leaving.
+enum SolverActionType { rotateClockwise, exit, slide }
 
 class SolverAction {
   final int arrowId;
@@ -17,6 +17,11 @@ class SolverAction {
 class SolverAnalysis {
   final List<SolverAction>? solution;
   final int initialPlayableMoves;
+
+  /// Arrows that can actually leave the board on move one. A blocked Rotator
+  /// counts as playable but not as an opening, because turning it is a choice
+  /// about spending a move rather than a way forward.
+  final int initialExitOptions;
   final List<int> playableMovesAlongSolution;
   final int visitedStates;
   final bool hitStateLimit;
@@ -24,6 +29,7 @@ class SolverAnalysis {
   const SolverAnalysis({
     required this.solution,
     required this.initialPlayableMoves,
+    required this.initialExitOptions,
     required this.playableMovesAlongSolution,
     required this.visitedStates,
     required this.hitStateLimit,
@@ -48,288 +54,174 @@ class SolverAnalysis {
   }
 }
 
+/// Shortest sequence of taps that clears a board, if one exists.
 class LevelSolver {
-  static bool isSolvable(LevelData level, {int maxVisitedStates = 100000}) =>
+  static bool isSolvable(LevelData level, {int maxVisitedStates = 400000}) =>
       analyze(level, maxVisitedStates: maxVisitedStates).isSolvable;
 
   static List<SolverAction>? findSolution(
     LevelData level, {
-    int maxVisitedStates = 100000,
+    int maxVisitedStates = 400000,
   }) => analyze(level, maxVisitedStates: maxVisitedStates).solution;
 
   static SolverAnalysis analyze(
     LevelData level, {
-    int maxVisitedStates = 100000,
+    int maxVisitedStates = 400000,
+  }) => analyzeBoard(BoardEngine(level), maxVisitedStates: maxVisitedStates);
+
+  static SolverAnalysis analyzeBoard(
+    BoardEngine board, {
+    int maxVisitedStates = 400000,
   }) {
-    final initial = <_SimArrow>[
-      for (var i = 0; i < level.arrows.length; i++)
-        _SimArrow(
-          id: i,
-          row: level.arrows[i].row,
-          column: level.arrows[i].column,
-          direction: level.arrows[i].direction,
-          type: level.arrows[i].type,
-          frozen: level.arrows[i].type == ArrowType.frozen,
-        ),
-    ];
+    final initialPlayable = board.playableCount(board.allMask, 0);
+    final initialExits = board.exitableCount(board.allMask, 0);
 
-    final queue = Queue<_SearchNode>()
-      ..add(
-        _SearchNode(
-          state: initial,
-          actions: const [],
-          playableMovesAlongPath: const [],
-        ),
+    SolverAnalysis failure({required bool limited, required int visited}) =>
+        SolverAnalysis(
+          solution: null,
+          initialPlayableMoves: initialPlayable,
+          initialExitOptions: initialExits,
+          playableMovesAlongSolution: const [],
+          visitedStates: visited,
+          hitStateLimit: limited,
+        );
+
+    if (board.arrowCount == 0) {
+      return const SolverAnalysis(
+        solution: [],
+        initialPlayableMoves: 0,
+        initialExitOptions: 0,
+        playableMovesAlongSolution: [],
+        visitedStates: 1,
+        hitStateLimit: false,
       );
-    final visited = <String>{_stateKey(initial)};
-    final initialPlayableMoves = initial.where((arrow) {
-      if (arrow.frozen) return false;
-      final clear = _canExit(arrow, initial, level.rows, level.columns);
-      return clear || arrow.type == ArrowType.rotator;
-    }).length;
-
-    SolverAnalysis result(
-      List<SolverAction>? solution, {
-      List<int> playableMovesAlongSolution = const [],
-      bool limited = false,
-    }) {
-      return SolverAnalysis(
-        solution: solution,
-        initialPlayableMoves: initialPlayableMoves,
-        playableMovesAlongSolution: playableMovesAlongSolution,
-        visitedStates: visited.length,
-        hitStateLimit: limited,
+    }
+    if (board.stateBits > 62) {
+      throw ArgumentError(
+        'Board needs ${board.stateBits} state bits; the key holds 62.',
       );
     }
 
-    while (queue.isNotEmpty) {
-      final node = queue.removeFirst();
-      final state = node.state;
-      if (state.isEmpty) {
-        return result(
-          node.actions,
-          playableMovesAlongSolution: node.playableMovesAlongPath,
+    final allMask = board.allMask;
+    final rootKey = allMask;
+    final parent = HashMap<int, int>()..[rootKey] = -1;
+    final via = HashMap<int, int>();
+    final cost = HashMap<int, int>()..[rootKey] = 0;
+
+    // A* over the lower bound, taking the deepest node of the cheapest tier
+    // first. The bound is consistent, so a board whose natural peeling order
+    // is already optimal is solved in roughly as many expansions as it has
+    // arrows, instead of enumerating every order that ties with it.
+    final tiers = <int, List<int>>{};
+    var tier = board.movesLowerBound(allMask);
+    tiers[tier] = [rootKey];
+
+    while (true) {
+      while (tiers[tier] == null || tiers[tier]!.isEmpty) {
+        tiers.remove(tier);
+        if (tiers.isEmpty) {
+          return failure(limited: false, visited: cost.length);
+        }
+        tier = tiers.keys.reduce((a, b) => a < b ? a : b);
+      }
+
+      final key = tiers[tier]!.removeLast();
+      final alive = key & allMask;
+      final moves = cost[key]!;
+
+      // Stale entry from a route that was later improved on.
+      if (moves + board.movesLowerBound(alive) != tier) continue;
+
+      if (alive == 0) {
+        return _reconstruct(
+          board,
+          key,
+          parent,
+          via,
+          initialPlayable,
+          initialExits,
         );
       }
-      final playableMoves = _playableCount(state, level.rows, level.columns);
-      final playableMovesAlongPath = [
-        ...node.playableMovesAlongPath,
-        playableMoves,
-      ];
 
-      for (var i = 0; i < state.length; i++) {
-        final arrow = state[i];
-        if (arrow.frozen) continue;
+      var remaining = alive;
+      while (remaining != 0) {
+        final bit = remaining & -remaining;
+        remaining ^= bit;
+        final index = bit.bitLength - 1;
 
-        final clear = _canExit(arrow, state, level.rows, level.columns);
+        final nextKey = board.move(index, key);
+        if (nextKey < 0) continue;
+        final nextAlive = nextKey & allMask;
+        final encoded =
+            (index << 2) | _actionCode(board, index, alive, nextAlive);
 
-        if (arrow.type == ArrowType.rotator && !clear) {
-          final next = _cloneState(state);
-          next[i] = next[i].copyWith(direction: next[i].direction.clockwise);
-          final enqueueResult = _enqueue(
-            next,
-            [
-              ...node.actions,
-              SolverAction(
-                arrowId: arrow.id,
-                type: SolverActionType.rotateClockwise,
-              ),
-            ],
-            playableMovesAlongPath,
-            queue,
-            visited,
-            maxVisitedStates,
-          );
-          if (enqueueResult == _EnqueueResult.limitExceeded) {
-            return SolverAnalysis(
-              solution: null,
-              initialPlayableMoves: initialPlayableMoves,
-              playableMovesAlongSolution: const [],
-              visitedStates: visited.length,
-              hitStateLimit: true,
-            );
-          }
-          continue;
+        final known = cost[nextKey];
+        if (known != null && known <= moves + 1) continue;
+        if (known == null && cost.length >= maxVisitedStates) {
+          return failure(limited: true, visited: cost.length);
         }
 
-        if (!clear) continue;
+        parent[nextKey] = key;
+        via[nextKey] = encoded;
+        cost[nextKey] = moves + 1;
 
-        final removed = <_Cell>{_Cell(arrow.row, arrow.column)};
-        if (arrow.type == ArrowType.bomb) {
-          for (final other in state) {
-            if (_adjacent(arrow.row, arrow.column, other.row, other.column)) {
-              removed.add(_Cell(other.row, other.column));
-            }
-          }
-        }
-
-        final next = <_SimArrow>[];
-        for (final other in state) {
-          if (removed.contains(_Cell(other.row, other.column))) continue;
-
-          var frozen = other.frozen;
-          if (frozen &&
-              removed.any(
-                (cell) =>
-                    _adjacent(other.row, other.column, cell.row, cell.column),
-              )) {
-            frozen = false;
-          }
-          next.add(other.copyWith(frozen: frozen));
-        }
-
-        final actions = [
-          ...node.actions,
-          SolverAction(arrowId: arrow.id, type: SolverActionType.exit),
-        ];
-        if (next.isEmpty) {
-          return result(
-            actions,
-            playableMovesAlongSolution: playableMovesAlongPath,
-          );
-        }
-        final enqueueResult = _enqueue(
-          next,
-          actions,
-          playableMovesAlongPath,
-          queue,
-          visited,
-          maxVisitedStates,
-        );
-        if (enqueueResult == _EnqueueResult.limitExceeded) {
-          return SolverAnalysis(
-            solution: null,
-            initialPlayableMoves: initialPlayableMoves,
-            playableMovesAlongSolution: const [],
-            visitedStates: visited.length,
-            hitStateLimit: true,
-          );
-        }
+        final nextTier = moves + 1 + board.movesLowerBound(nextAlive);
+        (tiers[nextTier] ??= <int>[]).add(nextKey);
+        if (nextTier < tier) tier = nextTier;
       }
     }
-
-    return result(null);
   }
 
-  static _EnqueueResult _enqueue(
-    List<_SimArrow> state,
-    List<SolverAction> actions,
-    List<int> playableMovesAlongPath,
-    Queue<_SearchNode> queue,
-    Set<String> visited,
-    int maxVisitedStates,
+  static int _actionCode(
+    BoardEngine board,
+    int arrow,
+    int alive,
+    int nextAlive,
   ) {
-    final key = _stateKey(state);
-    if (!visited.add(key)) return _EnqueueResult.skipped;
-    if (visited.length > maxVisitedStates) {
-      return _EnqueueResult.limitExceeded;
+    if (alive == nextAlive) return SolverActionType.rotateClockwise.index;
+    if (board.typeOf(arrow) == ArrowType.stone) {
+      return SolverActionType.slide.index;
     }
-    queue.add(
-      _SearchNode(
-        state: state,
-        actions: actions,
-        playableMovesAlongPath: playableMovesAlongPath,
-      ),
-    );
-    return _EnqueueResult.queued;
+    return SolverActionType.exit.index;
   }
 
-  static bool _canExit(
-    _SimArrow selected,
-    List<_SimArrow> state,
-    int rows,
-    int columns,
+  static SolverAnalysis _reconstruct(
+    BoardEngine board,
+    int goalKey,
+    Map<int, int> parent,
+    Map<int, int> via,
+    int initialPlayable,
+    int initialExits,
   ) {
-    return BoardRules.isPathClear(
-      row: selected.row,
-      column: selected.column,
-      direction: selected.direction,
-      rows: rows,
-      columns: columns,
-      occupiedCells: state.map(
-        (arrow) => (row: arrow.row, column: arrow.column),
-      ),
-    );
-  }
+    final keys = <int>[];
+    for (var key = goalKey; key != -1; key = parent[key]!) {
+      keys.add(key);
+    }
+    final path = keys.reversed.toList(growable: false);
 
-  static int _playableCount(List<_SimArrow> state, int rows, int columns) =>
-      state.where((arrow) {
-        if (arrow.frozen) return false;
-        return arrow.type == ArrowType.rotator ||
-            _canExit(arrow, state, rows, columns);
-      }).length;
+    final actions = <SolverAction>[];
+    final playable = <int>[];
+    for (var step = 0; step < path.length - 1; step++) {
+      final key = path[step];
+      playable.add(
+        board.playableCount(key & board.allMask, key >> board.arrowCount),
+      );
+      final encoded = via[path[step + 1]]!;
+      actions.add(
+        SolverAction(
+          arrowId: encoded >> 2,
+          type: SolverActionType.values[encoded & 3],
+        ),
+      );
+    }
 
-  static bool _adjacent(int r1, int c1, int r2, int c2) =>
-      BoardRules.areAdjacent(r1, c1, r2, c2);
-
-  static List<_SimArrow> _cloneState(List<_SimArrow> state) =>
-      state.map((arrow) => arrow.copyWith()).toList(growable: true);
-
-  static String _stateKey(List<_SimArrow> state) {
-    final sorted = [...state]..sort((a, b) => a.id.compareTo(b.id));
-    return sorted
-        .map(
-          (a) =>
-              '${a.id}:${a.row}:${a.column}:${a.direction.name}:'
-              '${a.type.name}:${a.frozen ? 1 : 0}',
-        )
-        .join('|');
-  }
-}
-
-enum _EnqueueResult { skipped, queued, limitExceeded }
-
-class _SearchNode {
-  final List<_SimArrow> state;
-  final List<SolverAction> actions;
-  final List<int> playableMovesAlongPath;
-
-  const _SearchNode({
-    required this.state,
-    required this.actions,
-    required this.playableMovesAlongPath,
-  });
-}
-
-class _Cell {
-  final int row;
-  final int column;
-
-  const _Cell(this.row, this.column);
-
-  @override
-  bool operator ==(Object other) =>
-      other is _Cell && other.row == row && other.column == column;
-
-  @override
-  int get hashCode => Object.hash(row, column);
-}
-
-class _SimArrow {
-  final int id;
-  final int row;
-  final int column;
-  final ArrowDirection direction;
-  final ArrowType type;
-  final bool frozen;
-
-  const _SimArrow({
-    required this.id,
-    required this.row,
-    required this.column,
-    required this.direction,
-    required this.type,
-    required this.frozen,
-  });
-
-  _SimArrow copyWith({ArrowDirection? direction, bool? frozen}) {
-    return _SimArrow(
-      id: id,
-      row: row,
-      column: column,
-      direction: direction ?? this.direction,
-      type: type,
-      frozen: frozen ?? this.frozen,
+    return SolverAnalysis(
+      solution: actions,
+      initialPlayableMoves: initialPlayable,
+      initialExitOptions: initialExits,
+      playableMovesAlongSolution: playable,
+      visitedStates: parent.length,
+      hitStateLimit: false,
     );
   }
 }

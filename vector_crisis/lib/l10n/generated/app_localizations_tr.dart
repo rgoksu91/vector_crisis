@@ -54,7 +54,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get selectLevel => 'BÖLÜM SEÇ';
 
   @override
-  String get handcraftedPuzzles => '100 EL YAPIMI BULMACA';
+  String get handcraftedPuzzles => '300 ZORLU BULMACA';
 
   @override
   String get completed => 'TAMAMLANDI';
@@ -159,7 +159,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get movesEnded => 'HAMLE BİTTİ';
 
   @override
-  String get allLevelsCompleted => '100 BÖLÜM TAMAMLANDI';
+  String get allLevelsCompleted => '300 BÖLÜM TAMAMLANDI';
 
   @override
   String get boardClear => 'TAHTA TEMİZ';
@@ -240,4 +240,18 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get introRotatorClockwise =>
       'Turuncu ok önü kapalıyken saat yönünde döner.';
+
+  @override
+  String get introStone =>
+      'Gri taş: ilk engele kadar kayar ve duvar olur. Nereye düşeceğine dikkat!';
+
+  @override
+  String get boardJammed => 'Bir duvar tek çıkış yolunu kapattı.';
+
+  @override
+  String get boardJammedTitle => 'Tahta tıkandı';
+
+  @override
+  String get boardJammedDescription =>
+      'Bir taş yolu kalıcı olarak kapattı. Sırayı değiştirip yeniden dene.';
 }

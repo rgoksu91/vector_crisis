@@ -25,4 +25,7 @@ class ArrowSeed {
 
   const ArrowSeed.bomb(this.row, this.column, this.direction)
     : type = ArrowType.bomb;
+
+  const ArrowSeed.stone(this.row, this.column, this.direction)
+    : type = ArrowType.stone;
 }

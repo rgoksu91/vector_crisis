@@ -311,6 +311,7 @@ class _ResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final failed = state.phase == GamePhase.failed;
+    final jammed = failed && state.message == GameHudMessage.boardJammed;
     final allDone = state.phase == GamePhase.allLevelsCompleted;
     return Container(
       width: 320,
@@ -342,7 +343,9 @@ class _ResultCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            failed
+            jammed
+                ? l10n.boardJammedTitle
+                : failed
                 ? l10n.movesEnded
                 : allDone
                 ? l10n.allLevelsCompleted
@@ -362,7 +365,9 @@ class _ResultCard extends StatelessWidget {
             ),
           const SizedBox(height: 10),
           Text(
-            failed
+            jammed
+                ? l10n.boardJammedDescription
+                : failed
                 ? l10n.failedDescription
                 : allDone
                 ? l10n.allDoneDescription
@@ -375,18 +380,21 @@ class _ResultCard extends StatelessWidget {
           ),
           const SizedBox(height: 22),
           if (failed) ...[
-            FilledButton.icon(
-              onPressed: rewardInProgress ? null : onRewardedContinue,
-              icon: rewardInProgress
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.ondemand_video_rounded),
-              label: Text(l10n.watchAdBonus),
-            ),
-            const SizedBox(height: 10),
+            // Extra moves cannot open a jammed board, so only restart is offered.
+            if (!jammed) ...[
+              FilledButton.icon(
+                onPressed: rewardInProgress ? null : onRewardedContinue,
+                icon: rewardInProgress
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.ondemand_video_rounded),
+                label: Text(l10n.watchAdBonus),
+              ),
+              const SizedBox(height: 10),
+            ],
             OutlinedButton(
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(50),
@@ -423,11 +431,13 @@ String _localizedGameMessage(AppLocalizations l10n, GameHudState state) =>
       GameHudMessage.campaignCompleted => l10n.campaignCompletedMessage,
       GameHudMessage.boardClear => l10n.boardClearMessage,
       GameHudMessage.moveLimitReached => l10n.moveLimitReached,
+      GameHudMessage.boardJammed => l10n.boardJammed,
       GameHudMessage.introTapArrow => l10n.introTapArrow,
       GameHudMessage.introRotator => l10n.introRotator,
       GameHudMessage.introFrozen => l10n.introFrozen,
       GameHudMessage.introBomb => l10n.introBomb,
       GameHudMessage.introRotatorClockwise => l10n.introRotatorClockwise,
+      GameHudMessage.introStone => l10n.introStone,
     };
 
 class _Pill extends StatelessWidget {
