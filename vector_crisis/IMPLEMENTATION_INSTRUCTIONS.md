@@ -1,5 +1,12 @@
 # Vector Crisis: Arrow Puzzle — Codex için Kritik Uygulama Talimatları
 
+> **Durum (2026-09): Tarihsel belge.** Bu talimatlar, elle tasarlanan ilk
+> 100 level'lık sürüm için yazılmıştır. Level 1–9 artık korunmuyor (yalnızca
+> 1–3 öğretici). BFS yerine A* solver kullanılıyor, board'lar 8x8'e kadar
+> çıkıyor ve taş (Stone) mekaniği eklendi. Güncel kurallar için
+> `tool/level_plan.dart`, metrikler için `LEVEL_AUDIT.md`, genel bakış için
+> `README.md` dosyasına bakın.
+
 Bu projede en önemli konu sadece 100 adet solvable level üretmek değildir.
 
 Amaç:

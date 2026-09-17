@@ -1,5 +1,11 @@
 # Vector Crisis: Arrow Puzzle — Level Design Specification
 
+> **Durum (2026-09): Tarihsel belge.** Bu belge, elle tasarlanan ilk 100
+> level'lık sürümü anlatır. Güncel oyunda 300 üretilmiş level, 8x8'e kadar
+> board'lar ve taş (Stone) mekaniği vardır. Güncel kurallar için
+> `tool/level_plan.dart`, metrikler için `LEVEL_AUDIT.md`, genel bakış için
+> `README.md` dosyasına bakın.
+
 ## 1. Purpose
 
 This document is the source of truth for Vector Crisis level design.

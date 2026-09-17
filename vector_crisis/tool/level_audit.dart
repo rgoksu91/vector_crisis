@@ -1,40 +1,59 @@
 // ignore_for_file: avoid_print
 
 import 'package:vector_crisis/game/data/levels.dart';
+import 'package:vector_crisis/game/logic/level_difficulty.dart';
 import 'package:vector_crisis/game/logic/level_solver.dart';
 import 'package:vector_crisis/game/models/arrow_direction.dart';
 import 'package:vector_crisis/game/models/arrow_type.dart';
 import 'package:vector_crisis/game/models/level_data.dart';
 
+import 'level_plan.dart';
+
+/// Catalog report behind LEVEL_AUDIT.md: `dart run tool/level_audit.dart`.
+
 void main() {
-  var baselineFingerprint = 17;
-  for (final level in levels.take(9)) {
-    baselineFingerprint = _mix(baselineFingerprint, level.id);
-    baselineFingerprint = _mix(baselineFingerprint, level.rows);
-    baselineFingerprint = _mix(baselineFingerprint, level.columns);
+  var tutorialFingerprint = 17;
+  for (final level in levels.take(3)) {
+    tutorialFingerprint = _mix(tutorialFingerprint, level.id);
+    tutorialFingerprint = _mix(tutorialFingerprint, level.rows);
+    tutorialFingerprint = _mix(tutorialFingerprint, level.columns);
     for (final arrow in level.arrows) {
-      baselineFingerprint = _mix(baselineFingerprint, arrow.row);
-      baselineFingerprint = _mix(baselineFingerprint, arrow.column);
-      baselineFingerprint = _mix(baselineFingerprint, arrow.direction.index);
-      baselineFingerprint = _mix(baselineFingerprint, arrow.type.index);
+      tutorialFingerprint = _mix(tutorialFingerprint, arrow.row);
+      tutorialFingerprint = _mix(tutorialFingerprint, arrow.column);
+      tutorialFingerprint = _mix(tutorialFingerprint, arrow.direction.index);
+      tutorialFingerprint = _mix(tutorialFingerprint, arrow.type.index);
     }
   }
 
-  print('baselineFingerprint=$baselineFingerprint');
+  print('tutorialFingerprint=$tutorialFingerprint');
   print(
-    'id,grid,arrows,difficulty,target,minimum,initial,decisions,'
-    'maxForcedStreak,visited,focus',
+    'id,grid,arrows,stones,difficulty,target,minimum,openings,visited,'
+    'unplanned3star,unplannedFail,unplannedJam,carefulFail,focus',
   );
   final analyses = <int, SolverAnalysis>{};
+  final reports = <int, DifficultyReport>{};
+  final gateMisses = <String>[];
   for (final level in levels) {
     final analysis = LevelSolver.analyze(level);
     analyses[level.id] = analysis;
+    final report = LevelDifficulty.measure(
+      level,
+      samples: 240,
+      minimumMoves: analysis.minimumMoves,
+    );
+    reports[level.id] = report;
+    if (level.id >= LevelPlan.firstGeneratedLevel) {
+      final misses = _gateMisses(level.id, report);
+      if (misses.isNotEmpty) gateMisses.add('${level.id}:${misses.join('/')}');
+    }
     print(
       '${level.id},${level.rows}x${level.columns},${level.arrows.length},'
+      '${level.arrows.where((arrow) => arrow.type == ArrowType.stone).length},'
       '${level.difficulty},${level.targetMoves ?? '-'},'
       '${analysis.minimumMoves ?? 'UNSOLVABLE'},'
-      '${analysis.initialPlayableMoves},${analysis.decisionStates},'
-      '${analysis.maxForcedMoveStreak},${analysis.visitedStates},'
+      '${analysis.initialExitOptions},${analysis.visitedStates},'
+      '${_pct(report.sensibleOptimalRate)},${_pct(report.sensibleFailureRate)},'
+      '${_pct(report.sensibleStuckRate)},${_pct(report.carefulFailureRate)},'
       '${level.mechanicFocus}',
     );
   }
@@ -80,8 +99,7 @@ void main() {
   });
   final mostOpen = levels.reduce(
     (a, b) =>
-        analyses[a.id]!.initialPlayableMoves >=
-            analyses[b.id]!.initialPlayableMoves
+        analyses[a.id]!.initialExitOptions >= analyses[b.id]!.initialExitOptions
         ? a
         : b,
   );
@@ -96,9 +114,6 @@ void main() {
     'summary.challenges=${levels.where((level) => level.isChallenge).map((level) => level.id).toList()}',
   );
   print(
-    'summary.breathers=${levels.where((level) => level.isBreather).map((level) => level.id).toList()}',
-  );
-  print(
     'summary.highestMoves=level${highestMoves.id}:${analyses[highestMoves.id]!.minimumMoves}',
   );
   print(
@@ -111,19 +126,59 @@ void main() {
   );
   print(
     'summary.mostOpen=level${mostOpen.id}:'
-    '${analyses[mostOpen.id]!.initialPlayableMoves}',
+    '${analyses[mostOpen.id]!.initialExitOptions}',
   );
   print(
-    'summary.branchingWarnings='
-    '${levels.where((level) {
-      final analysis = analyses[level.id]!;
-      return level.id >= 10 && (analysis.decisionStates < 2 || analysis.maxForcedMoveStreak > 4);
-    }).map((level) {
-      final analysis = analyses[level.id]!;
-      final actions = analysis.solution!.map((action) => '${action.arrowId}/${action.type.name}').join('>');
-      return '${level.id}:${analysis.playableMovesAlongSolution}:$actions';
-    }).toList()}',
+    'summary.totalOptimalMoves='
+    '${levels.fold<int>(0, (sum, level) => sum + analyses[level.id]!.minimumMoves!)}',
   );
+  for (final band in _bands) {
+    final inBand = levels.where(
+      (level) => level.id >= band.$1 && level.id <= band.$2,
+    );
+    double mean(double Function(DifficultyReport) pick) =>
+        inBand.fold<double>(0, (sum, level) => sum + pick(reports[level.id]!)) /
+        inBand.length;
+    final moves = inBand.map((level) => analyses[level.id]!.minimumMoves!);
+    print(
+      'summary.band=${band.$1}-${band.$2} levels=${inBand.length} '
+      'moves=${moves.reduce((a, b) => a < b ? a : b)}-'
+      '${moves.reduce((a, b) => a > b ? a : b)} '
+      'unplanned3star=${_pct(mean((r) => r.sensibleOptimalRate))} '
+      'unplannedFail=${_pct(mean((r) => r.sensibleFailureRate))} '
+      'unplannedJam=${_pct(mean((r) => r.sensibleStuckRate))} '
+      'carefulFail=${_pct(mean((r) => r.carefulFailureRate))} '
+      'careful3star=${_pct(mean((r) => r.carefulOptimalRate))}',
+    );
+  }
+  var rampDrops = <String>[];
+  for (var i = LevelPlan.firstGeneratedLevel; i < levels.length; i++) {
+    final before = levels[i - 1].targetMoves ?? 0;
+    final after = levels[i].targetMoves ?? 0;
+    if (after < before) rampDrops.add('${levels[i].id}:$before>$after');
+  }
+  print('summary.rampDrops=$rampDrops');
+  print('summary.gateMisses=$gateMisses');
+  // Both figures describe the one shortest path the solver returned, not the
+  // level itself, so they are informational. A forced run in the middle of
+  // that path is worth a look; a forced run at the very end is just the last
+  // arrows being cleared.
+  final corridors = <String>[];
+  final forcedEndings = <String>[];
+  for (final level in levels.where((level) => level.id >= 10)) {
+    final counts = analyses[level.id]!.playableMovesAlongSolution;
+    var tail = 0;
+    while (tail < counts.length && counts[counts.length - 1 - tail] == 1) {
+      tail++;
+    }
+    final middle = counts.sublist(0, counts.length - tail);
+    if (_longestForcedRun(middle) > 4) {
+      corridors.add('${level.id}:$counts');
+    }
+    if (tail > 4) forcedEndings.add('${level.id}:$tail');
+  }
+  print('summary.midSolutionCorridors=$corridors');
+  print('summary.forcedEndings=$forcedEndings');
 
   final similarityWarnings = <String>[];
   for (var i = 0; i < levels.length; i++) {
@@ -137,6 +192,39 @@ void main() {
     }
   }
   print('summary.similarityWarnings=$similarityWarnings');
+}
+
+const _bands = [
+  (4, 11),
+  (12, 50),
+  (51, 100),
+  (101, 150),
+  (151, 200),
+  (201, 250),
+  (251, 300),
+];
+
+String _pct(double rate) => '${(rate * 100).round()}%';
+
+List<String> _gateMisses(int id, DifficultyReport report) => [
+  if (report.sensibleOptimalRate > LevelPlan.maxUnplannedOptimalRate(id))
+    'unplanned3star',
+  if (report.sensibleFailureRate < LevelPlan.minUnplannedFailureRate(id))
+    'unplannedFail',
+  if (report.sensibleStuckRate < LevelPlan.minUnplannedStuckRate(id))
+    'unplannedJam',
+  if (report.carefulFailureRate < LevelPlan.minCarefulFailureRate(id))
+    'carefulFail',
+];
+
+int _longestForcedRun(List<int> counts) {
+  var longest = 0;
+  var current = 0;
+  for (final count in counts) {
+    current = count == 1 ? current + 1 : 0;
+    if (current > longest) longest = current;
+  }
+  return longest;
 }
 
 int _mix(int value, int part) => (value * 31 + part) & 0x7fffffff;
