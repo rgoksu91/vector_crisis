@@ -11,18 +11,21 @@ enum GameHudMessage {
   noAvailableMove,
   hintRotate,
   hintMarked,
+  hintWait,
   bonusMoves,
   bomb,
   campaignCompleted,
   boardClear,
   moveLimitReached,
   boardJammed,
+  waited,
   introTapArrow,
   introRotator,
   introFrozen,
   introBomb,
   introRotatorClockwise,
   introStone,
+  introGear,
 }
 
 @immutable
@@ -42,6 +45,10 @@ class GameHudState {
   final GameHudMessage message;
   final int messageValue;
 
+  /// A Gear is still on the board, so spending a move to turn them all is a
+  /// real option and the wait button is shown.
+  final bool gearsOnBoard;
+
   const GameHudState({
     required this.level,
     required this.totalLevels,
@@ -57,6 +64,7 @@ class GameHudState {
     required this.phase,
     required this.message,
     this.messageValue = 0,
+    this.gearsOnBoard = false,
   });
 
   factory GameHudState.initial() => const GameHudState(
@@ -74,6 +82,7 @@ class GameHudState {
   );
 
   GameHudState copyWith({
+    bool? gearsOnBoard,
     int? level,
     int? totalLevels,
     int? remaining,
@@ -104,6 +113,7 @@ class GameHudState {
       phase: phase ?? this.phase,
       message: message ?? this.message,
       messageValue: messageValue ?? this.messageValue,
+      gearsOnBoard: gearsOnBoard ?? this.gearsOnBoard,
     );
   }
 }

@@ -3,6 +3,11 @@ import '../models/arrow_seed.dart';
 import '../models/level_data.dart';
 import 'campaign_levels.dart';
 
+/// Bumped whenever the generated catalog is rebuilt. Saved progress records
+/// the best move count per level, which means nothing once the boards behind
+/// those ids have changed, so a mismatch resets it.
+const campaignRevision = 2;
+
 /// Levels 1-3 are hand-made tutorials; everything after them is generated
 /// by tool/generate_levels.dart.
 const levels = <LevelData>[

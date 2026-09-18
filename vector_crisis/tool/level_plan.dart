@@ -1,6 +1,12 @@
 import 'dart:math';
 
-typedef Specials = ({int rotators, int frozen, int bombs, int stones});
+typedef Specials = ({
+  int rotators,
+  int frozen,
+  int bombs,
+  int stones,
+  int gears,
+});
 
 /// The shape of the campaign, expressed as a rule per level rather than as a
 /// hand-tuned table, so the ramp cannot quietly develop a step backwards.
@@ -8,9 +14,10 @@ abstract final class LevelPlan {
   static const firstGeneratedLevel = 4;
   static const lastLevel = 300;
 
-  /// Must match `LevelPlanMarks.firstStoneLevel` in the game, which shows
-  /// the Stone hint on this level.
+  /// Must match `LevelPlanMarks` in the game, which shows the matching hint
+  /// on these levels.
   static const firstStoneLevel = 12;
+  static const firstGearLevel = 14;
 
   /// Optimum-move floor. Non-decreasing by construction: every level must
   /// cost at least as much as the one before it. Length climbs quickly over
@@ -48,11 +55,11 @@ abstract final class LevelPlan {
   /// Mechanics arrive on the same schedule the in-game hints announce:
   /// Rotator at 6, Frozen at 8, Bomb at 10, Stone at 12.
   static Specials specials(int id, int arrows) {
-    if (id < 6) return (rotators: 0, frozen: 0, bombs: 0, stones: 0);
-    if (id < 8) return (rotators: 1, frozen: 0, bombs: 0, stones: 0);
+    if (id < 6) return (rotators: 0, frozen: 0, bombs: 0, stones: 0, gears: 0);
+    if (id < 8) return (rotators: 1, frozen: 0, bombs: 0, stones: 0, gears: 0);
     // A second Rotator turns the lesson into a choice: which one is worth
     // turning now, and which one is worth waiting for.
-    if (id < 10) return (rotators: 2, frozen: 1, bombs: 0, stones: 0);
+    if (id < 10) return (rotators: 2, frozen: 1, bombs: 0, stones: 0, gears: 0);
 
     final rotators = (1 + (id - 10) * 4 / 90).round().clamp(1, 5);
     final frozen = (1 + (id - 10) * 3 / 90).round().clamp(1, 4);
@@ -64,7 +71,14 @@ abstract final class LevelPlan {
         : id < 20
         ? 1
         : (1 + (id - 20) / 40).floor().clamp(1, 4);
-    final total = rotators + frozen + bombs + stones;
+    // Gears are what stop a board from being cleared by rote: every move
+    // turns them, so a plan has to count moves, not just read arrows.
+    final gears = id < firstGearLevel
+        ? 0
+        : id < 24
+        ? 1
+        : (1 + (id - 24) / 30).floor().clamp(1, 6);
+    final total = rotators + frozen + bombs + stones + gears;
 
     // Normal arrows must stay the majority or the board stops reading clearly.
     final room = arrows * 2 / 5;
@@ -75,9 +89,16 @@ abstract final class LevelPlan {
         frozen: max(1, (frozen * scale).floor()),
         bombs: max(1, (bombs * scale).floor()),
         stones: stones == 0 ? 0 : max(1, (stones * scale).floor()),
+        gears: gears == 0 ? 0 : max(1, (gears * scale).floor()),
       );
     }
-    return (rotators: rotators, frozen: frozen, bombs: bombs, stones: stones);
+    return (
+      rotators: rotators,
+      frozen: frozen,
+      bombs: bombs,
+      stones: stones,
+      gears: gears,
+    );
   }
 
   /// Ceiling on how often an unplanned run still lands the optimum.
@@ -125,6 +146,31 @@ abstract final class LevelPlan {
     _ => 0.45,
   };
 
+  /// Ceiling on how often the worked-out strategy (clear what you can, stones
+  /// last, wait for gears, never waste a turn) still lands the optimum. This
+  /// is the gate that the Stone-only catalog failed: a player following those
+  /// rules three-starred most of it.
+  static double maxStrategistOptimalRate(int id) => switch (id) {
+    // Until Gears arrive there is no way to punish a fixed routine, so the
+    // gate only starts once the player has met them.
+    < firstGearLevel + 2 => 1.0,
+    <= 20 => 0.35,
+    <= 40 => 0.20,
+    <= 80 => 0.12,
+    <= 150 => 0.08,
+    _ => 0.05,
+  };
+
+  /// Floor on how often that same player loses the level outright.
+  static double minStrategistFailureRate(int id) => switch (id) {
+    < firstGearLevel + 2 => 0.0,
+    <= 20 => 0.15,
+    <= 40 => 0.30,
+    <= 80 => 0.45,
+    <= 150 => 0.55,
+    _ => 0.65,
+  };
+
   static bool isChallenge(int id) => id % 10 == 0;
 
   static int difficulty(int id) =>
@@ -135,9 +181,10 @@ abstract final class LevelPlan {
     <= 7 => 'rotator turns cost moves',
     <= 9 => 'frozen arrows need a neighbour to leave',
     <= 11 => 'blast timing',
-    <= 20 => 'where a stone lands',
-    <= 40 => 'stones wait for their path to clear',
-    <= 70 => 'rotator patience around walls',
+    <= 13 => 'where a stone lands',
+    <= 23 => 'gears turn with every move',
+    <= 40 => 'timing a gear while stones wait',
+    <= 70 => 'gear parity around walls',
     <= 100 => 'competing dependency chains',
     <= 150 => 'two stones, one safe order',
     <= 200 => 'dense board, scarce moves',

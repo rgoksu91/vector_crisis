@@ -10,6 +10,7 @@ class AppController extends ChangeNotifier {
   static const _hapticsKey = 'settings.haptics';
   static const _localeKey = 'settings.locale';
   static const _bestMovesPrefix = 'progress.bestMoves.';
+  static const _revisionKey = 'progress.campaignRevision';
 
   SharedPreferences? _preferences;
   final Map<int, int> _bestMoves = {};
@@ -33,6 +34,13 @@ class AppController extends ChangeNotifier {
     if (isReady) return;
     final preferences = await SharedPreferences.getInstance();
     _preferences = preferences;
+    // Progress from an older catalog describes boards that no longer exist.
+    final savedRevision = preferences.getInt(_revisionKey);
+    if (savedRevision != campaignRevision) {
+      await _clearProgress(preferences);
+      await preferences.setInt(_revisionKey, campaignRevision);
+    }
+
     unlockedLevel = preferences.getInt(_unlockedKey) ?? 1;
     lastLevel = preferences.getInt(_lastLevelKey) ?? 1;
     hapticsEnabled = preferences.getBool(_hapticsKey) ?? true;
@@ -86,15 +94,20 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> resetProgress() async {
-    for (final level in levels) {
-      await _preferences?.remove('$_bestMovesPrefix${level.id}');
-    }
+    final preferences = _preferences;
+    if (preferences != null) await _clearProgress(preferences);
     _bestMoves.clear();
     unlockedLevel = 1;
     lastLevel = 1;
-    await _preferences?.setInt(_unlockedKey, 1);
-    await _preferences?.setInt(_lastLevelKey, 1);
     notifyListeners();
+  }
+
+  Future<void> _clearProgress(SharedPreferences preferences) async {
+    for (final key in preferences.getKeys().toList()) {
+      if (key.startsWith(_bestMovesPrefix)) await preferences.remove(key);
+    }
+    await preferences.setInt(_unlockedKey, 1);
+    await preferences.setInt(_lastLevelKey, 1);
   }
 
   Future<void> setHapticsEnabled(bool value) async {

@@ -274,4 +274,17 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get boardJammedDescription =>
       'Bir taş yolu kalıcı olarak kapattı. Sırayı değiştirip yeniden dene.';
+
+  @override
+  String get introGear =>
+      'Yeşil dişli: her hamleden sonra 90° döner. Çıkış anını hesapla.';
+
+  @override
+  String get waited => 'Bir hamle beklendi; dişliler döndü.';
+
+  @override
+  String get hintWait => 'İpucu: dişliler hizalansın diye bir hamle bekle.';
+
+  @override
+  String get waitButton => 'BEKLE';
 }

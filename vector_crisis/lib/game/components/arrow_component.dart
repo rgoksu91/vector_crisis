@@ -190,6 +190,7 @@ class ArrowComponent extends PositionComponent
             ArrowType.frozen => const Color(0xFF5AAFE8),
             ArrowType.bomb => const Color(0xFFFF5F6D),
             ArrowType.stone => const Color(0xFF8E8AA3),
+            ArrowType.gear => const Color(0xFF2FBF9B),
           };
 
     canvas.drawShadow(

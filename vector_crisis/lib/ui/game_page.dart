@@ -283,6 +283,19 @@ class _Hud extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
+                // Spending a move on nothing is a real play once Gears are
+                // out, so it gets a button instead of hiding behind a tap on
+                // something blocked.
+                if (state.gearsOnBoard) ...[
+                  _CircleButton(
+                    icon: Icons.hourglass_bottom_rounded,
+                    tooltip: l10n.waitButton,
+                    onTap: state.phase == GamePhase.playing
+                        ? game.waitOneMove
+                        : null,
+                  ),
+                  const SizedBox(width: 9),
+                ],
                 _HintButton(
                   remaining: state.hintsRemaining,
                   tooltip: l10n.hintTooltip,
@@ -502,6 +515,7 @@ String _localizedGameMessage(AppLocalizations l10n, GameHudState state) =>
       GameHudMessage.noAvailableMove => l10n.noAvailableMove,
       GameHudMessage.hintRotate => l10n.hintRotate,
       GameHudMessage.hintMarked => l10n.hintMarked,
+      GameHudMessage.hintWait => l10n.hintWait,
       GameHudMessage.bonusMoves => l10n.bonusMovesGranted(state.messageValue),
       GameHudMessage.bomb =>
         state.messageValue == 0 ? 'BOOM!' : l10n.bombResult(state.messageValue),
@@ -509,12 +523,14 @@ String _localizedGameMessage(AppLocalizations l10n, GameHudState state) =>
       GameHudMessage.boardClear => l10n.boardClearMessage,
       GameHudMessage.moveLimitReached => l10n.moveLimitReached,
       GameHudMessage.boardJammed => l10n.boardJammed,
+      GameHudMessage.waited => l10n.waited,
       GameHudMessage.introTapArrow => l10n.introTapArrow,
       GameHudMessage.introRotator => l10n.introRotator,
       GameHudMessage.introFrozen => l10n.introFrozen,
       GameHudMessage.introBomb => l10n.introBomb,
       GameHudMessage.introRotatorClockwise => l10n.introRotatorClockwise,
       GameHudMessage.introStone => l10n.introStone,
+      GameHudMessage.introGear => l10n.introGear,
     };
 
 class _Pill extends StatelessWidget {

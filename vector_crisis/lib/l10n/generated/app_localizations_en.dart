@@ -283,4 +283,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get boardJammedDescription =>
       'A stone blocked a path for good. Change the order and try again.';
+
+  @override
+  String get introGear =>
+      'Green gear: turns 90° after every move. Time its exit.';
+
+  @override
+  String get waited => 'Waited a move; the gears turned.';
+
+  @override
+  String get hintWait => 'Hint: wait a move to line the gears up.';
+
+  @override
+  String get waitButton => 'WAIT';
 }

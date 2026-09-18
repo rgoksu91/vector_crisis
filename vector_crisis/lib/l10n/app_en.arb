@@ -87,5 +87,9 @@
   "introStone": "Grey stone: slides to the first obstacle and becomes a wall. Mind where it lands!",
   "boardJammed": "A wall closed the only way out.",
   "boardJammedTitle": "Board jammed",
-  "boardJammedDescription": "A stone blocked a path for good. Change the order and try again."
+  "boardJammedDescription": "A stone blocked a path for good. Change the order and try again.",
+  "introGear": "Green gear: turns 90° after every move. Time its exit.",
+  "waited": "Waited a move; the gears turned.",
+  "hintWait": "Hint: wait a move to line the gears up.",
+  "waitButton": "WAIT"
 }

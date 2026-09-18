@@ -17,6 +17,7 @@ class ForgeRequest {
   final int frozen;
   final int bombs;
   final int stones;
+  final int gears;
   final int seed;
 
   /// Which spatial motif the cells are drawn from. Part of the search space
@@ -37,6 +38,7 @@ class ForgeRequest {
     required this.frozen,
     required this.bombs,
     this.stones = 0,
+    this.gears = 0,
     required this.seed,
     required this.motif,
     this.tight = false,
@@ -139,15 +141,9 @@ abstract final class LevelForge {
       for (var i = 0; i < count; i++) cells[i]: blockersAtStart[i],
     };
 
-    final types = _assignTypes(
-      request,
-      cells,
-      rank,
-      cells.toSet(),
-      blockers,
-      {for (var i = 0; i < count; i++) cells[i]: directions[i]!},
-      random,
-    );
+    final types = _assignTypes(request, cells, rank, cells.toSet(), blockers, {
+      for (var i = 0; i < count; i++) cells[i]: directions[i]!,
+    }, random);
     if (types == null) return null;
 
     final arrows = <ArrowSeed>[];
@@ -155,6 +151,11 @@ abstract final class LevelForge {
       final cell = cells[i];
       final type = types[cell] ?? ArrowType.normal;
       var direction = directions[i]!;
+      if (type == ArrowType.gear) {
+        for (var turn = 0; turn < random.nextInt(4); turn++) {
+          direction = _counterClockwise(direction);
+        }
+      }
       if (type == ArrowType.rotator) {
         // Store the arrow turned back from the direction that works, so the
         // player has to weigh spending turns now against waiting for the ray
@@ -269,6 +270,19 @@ abstract final class LevelForge {
       }
     }
 
+    // A Gear points where the peel order needs it only once every four moves,
+    // so its stored direction is turned back by a random offset. Waiting is
+    // always possible, so this can never make the board unsolvable.
+    if (request.gears > 0) {
+      final candidates =
+          cells.where((cell) => !types.containsKey(cell)).toList()
+            ..shuffle(random);
+      if (candidates.length < request.gears) return null;
+      for (final cell in candidates.take(request.gears)) {
+        types[cell] = ArrowType.gear;
+      }
+    }
+
     // Rotators are only interesting where the ray starts blocked; an open one
     // simply leaves and teaches nothing.
     if (request.rotators > 0) {
@@ -337,9 +351,7 @@ abstract final class LevelForge {
       final earlyHurts =
           early != null &&
           early != edge &&
-          cells.any(
-            (other) => other != cell && rays[other]!.contains(early),
-          );
+          cells.any((other) => other != cell && rays[other]!.contains(early));
 
       final score =
           mustPrecede + (earlyHurts ? 2.5 : 0) + random.nextDouble() * 0.9;

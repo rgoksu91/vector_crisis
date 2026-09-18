@@ -583,6 +583,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A stone blocked a path for good. Change the order and try again.'**
   String get boardJammedDescription;
+
+  /// No description provided for @introGear.
+  ///
+  /// In en, this message translates to:
+  /// **'Green gear: turns 90° after every move. Time its exit.'**
+  String get introGear;
+
+  /// No description provided for @waited.
+  ///
+  /// In en, this message translates to:
+  /// **'Waited a move; the gears turned.'**
+  String get waited;
+
+  /// No description provided for @hintWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Hint: wait a move to line the gears up.'**
+  String get hintWait;
+
+  /// No description provided for @waitButton.
+  ///
+  /// In en, this message translates to:
+  /// **'WAIT'**
+  String get waitButton;
 }
 
 class _AppLocalizationsDelegate

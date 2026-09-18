@@ -4,10 +4,13 @@ import 'board_engine.dart';
 import '../models/arrow_type.dart';
 import '../models/level_data.dart';
 
-/// A Stone's tap is a [slide]: it ends as a wall rather than leaving.
-enum SolverActionType { rotateClockwise, exit, slide }
+/// A Stone's tap is a [slide]: it ends as a wall rather than leaving. A
+/// [wait] spends a move on nothing, which only ever serves to turn the Gears
+/// one more quarter; in the game it is the wait button or any blocked tap.
+enum SolverActionType { rotateClockwise, exit, slide, wait }
 
 class SolverAction {
+  /// The arrow tapped, or -1 for [SolverActionType.wait].
   final int arrowId;
   final SolverActionType type;
 
@@ -169,6 +172,22 @@ class LevelSolver {
         (tiers[nextTier] ??= <int>[]).add(nextKey);
         if (nextTier < tier) tier = nextTier;
       }
+
+      final waited = board.waitMove(key);
+      if (waited >= 0) {
+        final known = cost[waited];
+        if (known == null || known > moves + 1) {
+          if (known == null && cost.length >= maxVisitedStates) {
+            return failure(limited: true, visited: cost.length);
+          }
+          parent[waited] = key;
+          via[waited] = (board.arrowCount << 2) | SolverActionType.wait.index;
+          cost[waited] = moves + 1;
+          final nextTier = moves + 1 + board.movesLowerBound(alive);
+          (tiers[nextTier] ??= <int>[]).add(waited);
+          if (nextTier < tier) tier = nextTier;
+        }
+      }
     }
   }
 
@@ -207,10 +226,11 @@ class LevelSolver {
         board.playableCount(key & board.allMask, key >> board.arrowCount),
       );
       final encoded = via[path[step + 1]]!;
+      final type = SolverActionType.values[encoded & 3];
       actions.add(
         SolverAction(
-          arrowId: encoded >> 2,
-          type: SolverActionType.values[encoded & 3],
+          arrowId: type == SolverActionType.wait ? -1 : encoded >> 2,
+          type: type,
         ),
       );
     }

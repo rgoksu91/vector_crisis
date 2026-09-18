@@ -6,9 +6,9 @@ import 'dart:math';
 import 'package:vector_crisis/game/logic/board_engine.dart';
 import 'package:vector_crisis/game/logic/level_difficulty.dart';
 import 'package:vector_crisis/game/logic/level_solver.dart';
-import 'package:vector_crisis/game/models/arrow_type.dart';
 import 'package:vector_crisis/game/models/level_data.dart';
 
+import 'campaign_writer.dart';
 import 'level_forge.dart';
 import 'level_plan.dart';
 
@@ -22,12 +22,12 @@ const _candidateTarget = 40;
 
 /// Escalation when a level cannot be built: extra Rotators waste moves, and
 /// on Stone levels an extra Stone adds another way to jam the board.
-const _escalation = <({int rotators, int stones})>[
-  (rotators: 0, stones: 0),
-  (rotators: 0, stones: 1),
-  (rotators: 1, stones: 0),
-  (rotators: 1, stones: 1),
-  (rotators: 2, stones: 1),
+const _escalation = <({int rotators, int stones, int gears})>[
+  (rotators: 0, stones: 0, gears: 0),
+  (rotators: 0, stones: 0, gears: 1),
+  (rotators: 0, stones: 1, gears: 1),
+  (rotators: 1, stones: 1, gears: 1),
+  (rotators: 1, stones: 1, gears: 2),
 ];
 
 /// Usage: `generate_levels.dart [from] [to] [--write] [--floor=N]`
@@ -57,10 +57,12 @@ void main(List<String> args) {
   for (var id = from; id <= to; id++) {
     final floor = max(LevelPlan.movesFloor(id), previousMinimum);
     final hasStones = id >= LevelPlan.firstStoneLevel;
+    final hasGears = id >= LevelPlan.firstGearLevel;
     _Forged? result;
     for (final extra in _escalation) {
       if (result != null) break;
       if (extra.stones > 0 && !hasStones) continue;
+      if (extra.gears > 0 && !hasGears) continue;
       result = _forgeLevel(id, floor, signatures, extra: extra);
     }
     // Last resort: accept a longer optimum rather than stall the campaign.
@@ -69,7 +71,7 @@ void main(List<String> args) {
       id,
       floor,
       signatures,
-      extra: (rotators: 1, stones: hasStones ? 1 : 0),
+      extra: (rotators: 1, stones: hasStones ? 1 : 0, gears: hasGears ? 1 : 0),
       extraCeiling: 2,
     );
 
@@ -95,6 +97,8 @@ void main(List<String> args) {
       'stones=${result.stones} '
       'unplannedStuck=${_pct(result.report.sensibleStuckRate)} '
       'carefulFail=${_pct(result.report.carefulFailureRate)} '
+      'strategist3star=${_pct(result.report.strategistOptimalRate)} '
+      'strategistFail=${_pct(result.report.strategistFailureRate)} '
       'careful3star=${_pct(result.report.carefulOptimalRate)} '
       'tried=${result.tried}',
     );
@@ -110,7 +114,7 @@ void main(List<String> args) {
     final path = 'lib/game/data/campaign/$name.dart';
     File(path)
       ..createSync(recursive: true)
-      ..writeAsStringSync(_render(accepted, name, from, to));
+      ..writeAsStringSync(renderCampaignPart(accepted, from, to));
     print('wrote $path');
   }
 }
@@ -139,7 +143,7 @@ _Forged? _forgeLevel(
   int id,
   int floor,
   Set<String> taken, {
-  required ({int rotators, int stones}) extra,
+  required ({int rotators, int stones, int gears}) extra,
   int extraCeiling = 0,
 }) {
   final grid = LevelPlan.grid(id);
@@ -154,6 +158,8 @@ _Forged? _forgeLevel(
   final failureFloor = LevelPlan.minUnplannedFailureRate(id);
   final carefulFloor = LevelPlan.minCarefulFailureRate(id);
   final stuckFloor = LevelPlan.minUnplannedStuckRate(id);
+  final strategistCeiling = LevelPlan.maxStrategistOptimalRate(id);
+  final strategistFloor = LevelPlan.minStrategistFailureRate(id);
 
   _Forged? best;
   var tried = 0;
@@ -173,8 +179,13 @@ _Forged? _forgeLevel(
       frozen: plan.frozen,
       bombs: plan.bombs,
       stones: plan.stones == 0 ? 0 : plan.stones + extra.stones,
+      gears: plan.gears == 0 ? 0 : plan.gears + extra.gears,
     );
-    final stateBits = arrowCount + quota.rotators * 2 + quota.stones * 3;
+    final stateBits =
+        arrowCount +
+        quota.rotators * 2 +
+        quota.stones * 3 +
+        (quota.gears > 0 ? 2 : 0);
     if (stateBits > BoardEngine.maxStateBits) continue;
     var inWindow = 0;
     var solved = 0;
@@ -195,6 +206,7 @@ _Forged? _forgeLevel(
           frozen: quota.frozen,
           bombs: quota.bombs,
           stones: quota.stones,
+          gears: quota.gears,
           motif: attempt % _motifs,
           tight: attempt ~/ _motifs % 2 == 1,
           seed: id * 1000003 + arrowCount * 9973 + attempt,
@@ -290,6 +302,14 @@ _Forged? _forgeLevel(
         reject('careful play wins too often');
         continue;
       }
+      if (report.strategistOptimalRate > strategistCeiling) {
+        reject('worked-out strategy three-stars it');
+        continue;
+      }
+      if (report.strategistFailureRate < strategistFloor) {
+        reject('worked-out strategy never loses');
+        continue;
+      }
 
       passing++;
       final score =
@@ -298,6 +318,8 @@ _Forged? _forgeLevel(
           0.5 * min(report.wasteMargin, 6) / 6 +
           0.5 * (1 - report.carelessOptimalRate) +
           3.0 * min(report.carefulFailureRate, 0.8) +
+          5.0 * (1 - report.strategistOptimalRate) +
+          4.0 * min(report.strategistFailureRate, 0.9) +
           1.0 * report.sensibleStuckRate -
           4.0 * (minimum - floor);
 
@@ -361,62 +383,4 @@ String _signature(LevelData level) {
           .toList()
         ..sort();
   return '${level.rows}x${level.columns}|${arrows.join('|')}';
-}
-
-String campaignPartName(int from, int to) =>
-    'levels_${from.toString().padLeft(3, '0')}'
-    '_${to.toString().padLeft(3, '0')}';
-
-String campaignPartVariable(int from, int to) =>
-    'levels${from.toString().padLeft(3, '0')}'
-    'To${to.toString().padLeft(3, '0')}';
-
-String _render(List<LevelData> levels, String name, int from, int to) {
-  final buffer = StringBuffer()
-    ..writeln(
-      '// GENERATED BY tool/generate_levels.dart -- DO NOT EDIT BY HAND.',
-    )
-    ..writeln('//')
-    ..writeln(
-      '// Every board is solvable by construction and its targetMoves is the',
-    )
-    ..writeln('// solver optimum. Regenerate with:')
-    ..writeln('//   tool/generate_campaign.sh')
-    ..writeln()
-    ..writeln("import '../../models/arrow_direction.dart';")
-    ..writeln("import '../../models/arrow_seed.dart';")
-    ..writeln("import '../../models/level_data.dart';")
-    ..writeln()
-    ..writeln('const ${campaignPartVariable(from, to)} = <LevelData>[');
-
-  for (final level in levels) {
-    buffer
-      ..writeln('  LevelData(')
-      ..writeln('    id: ${level.id},')
-      ..writeln('    rows: ${level.rows},')
-      ..writeln('    columns: ${level.columns},')
-      ..writeln('    difficulty: ${level.difficulty},')
-      ..writeln("    mechanicFocus: '${level.mechanicFocus}',")
-      ..writeln('    targetMoves: ${level.targetMoves},');
-    if (level.isChallenge) buffer.writeln('    isChallenge: true,');
-    buffer.writeln('    arrows: [');
-    for (final arrow in level.arrows) {
-      final name = switch (arrow.type) {
-        ArrowType.normal => 'normal',
-        ArrowType.rotator => 'rotator',
-        ArrowType.frozen => 'frozen',
-        ArrowType.bomb => 'bomb',
-        ArrowType.stone => 'stone',
-      };
-      buffer.writeln(
-        '      ArrowSeed.$name(${arrow.row}, ${arrow.column}, '
-        'ArrowDirection.${arrow.direction.name}),',
-      );
-    }
-    buffer
-      ..writeln('    ],')
-      ..writeln('  ),');
-  }
-
-  return (buffer..writeln('];')).toString();
 }

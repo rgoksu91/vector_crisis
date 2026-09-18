@@ -27,8 +27,9 @@ void main() {
 
   print('tutorialFingerprint=$tutorialFingerprint');
   print(
-    'id,grid,arrows,stones,difficulty,target,minimum,openings,visited,'
-    'unplanned3star,unplannedFail,unplannedJam,carefulFail,focus',
+    'id,grid,arrows,stones,gears,difficulty,target,minimum,openings,visited,'
+    'unplanned3star,unplannedFail,unplannedJam,carefulFail,strategist3star,'
+    'strategistFail,focus',
   );
   final analyses = <int, SolverAnalysis>{};
   final reports = <int, DifficultyReport>{};
@@ -49,11 +50,14 @@ void main() {
     print(
       '${level.id},${level.rows}x${level.columns},${level.arrows.length},'
       '${level.arrows.where((arrow) => arrow.type == ArrowType.stone).length},'
+      '${level.arrows.where((arrow) => arrow.type == ArrowType.gear).length},'
       '${level.difficulty},${level.targetMoves ?? '-'},'
       '${analysis.minimumMoves ?? 'UNSOLVABLE'},'
       '${analysis.initialExitOptions},${analysis.visitedStates},'
       '${_pct(report.sensibleOptimalRate)},${_pct(report.sensibleFailureRate)},'
       '${_pct(report.sensibleStuckRate)},${_pct(report.carefulFailureRate)},'
+      '${_pct(report.strategistOptimalRate)},'
+      '${_pct(report.strategistFailureRate)},'
       '${level.mechanicFocus}',
     );
   }
@@ -148,7 +152,9 @@ void main() {
       'unplannedFail=${_pct(mean((r) => r.sensibleFailureRate))} '
       'unplannedJam=${_pct(mean((r) => r.sensibleStuckRate))} '
       'carefulFail=${_pct(mean((r) => r.carefulFailureRate))} '
-      'careful3star=${_pct(mean((r) => r.carefulOptimalRate))}',
+      'careful3star=${_pct(mean((r) => r.carefulOptimalRate))} '
+      'strategist3star=${_pct(mean((r) => r.strategistOptimalRate))} '
+      'strategistFail=${_pct(mean((r) => r.strategistFailureRate))}',
     );
   }
   var rampDrops = <String>[];
@@ -215,6 +221,10 @@ List<String> _gateMisses(int id, DifficultyReport report) => [
     'unplannedJam',
   if (report.carefulFailureRate < LevelPlan.minCarefulFailureRate(id))
     'carefulFail',
+  if (report.strategistOptimalRate > LevelPlan.maxStrategistOptimalRate(id))
+    'strategist3star',
+  if (report.strategistFailureRate < LevelPlan.minStrategistFailureRate(id))
+    'strategistFail',
 ];
 
 int _longestForcedRun(List<int> counts) {

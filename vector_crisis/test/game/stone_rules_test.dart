@@ -135,4 +135,53 @@ void main() {
     final afterFirst = board.move(0, board.allMask);
     expect(board.slideSteps(1, afterFirst & board.allMask, afterFirst >> 3), 0);
   });
+
+  group('gears', () {
+    // Walls box the Gear in on three sides. It starts pointing right, into a
+    // wall, and only faces the open left side two quarter turns later, so the
+    // level cannot be cleared in fewer than three moves.
+    const level = LevelData(
+      id: 1,
+      rows: 3,
+      columns: 3,
+      walls: [(row: 0, column: 1), (row: 2, column: 1), (row: 1, column: 2)],
+      arrows: [ArrowSeed.gear(1, 1, ArrowDirection.right)],
+    );
+
+    test('a gear turns a quarter after every move', () {
+      final board = BoardEngine(level);
+      expect(board.isClear(0, board.allMask, 0), isFalse);
+      final waited = board.waitMove(board.allMask);
+      expect(board.gearPhase(waited >> board.arrowCount), 1);
+      expect(
+        board.directionIndex(0, waited >> board.arrowCount),
+        ArrowDirection.down.index,
+      );
+    });
+
+    test('waiting spends a move and leaves the board alone', () {
+      final board = BoardEngine(level);
+      final waited = board.waitMove(board.allMask);
+      expect(waited & board.allMask, board.allMask);
+      expect(board.move(0, waited), -1);
+    });
+
+    test('there is nothing to wait for once the gears are gone', () {
+      final board = BoardEngine(level);
+      final aligned = board.waitMove(board.waitMove(board.allMask));
+      final cleared = board.move(0, aligned);
+      expect(cleared & board.allMask, 0);
+      expect(board.waitMove(cleared), -1);
+    });
+
+    test('the solver spends moves to line a gear up', () {
+      final solution = LevelSolver.findSolution(level)!;
+      expect(solution.map((action) => action.type), [
+        SolverActionType.wait,
+        SolverActionType.wait,
+        SolverActionType.exit,
+      ]);
+      expect(solution.first.arrowId, -1);
+    });
+  });
 }

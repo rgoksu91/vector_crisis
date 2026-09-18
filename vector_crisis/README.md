@@ -15,6 +15,11 @@ puzzle uygulamasıdır. Oyuncu, önündeki yol açık olan okları board dışı
   veya kenar) kadar kayar ve orada kalıcı duvara dönüşür. Önünde boş hücre yoksa
   hareket etmez. Yanlış zamanda kaydırılan taş, başka okların tek çıkış yolunu
   kapatıp level'ı kilitleyebilir.
+- Dişli (Gear) ok her hamleden sonra 90° döner. Yani hangi yöne baktığı, o ana
+  kadar kaç hamle yaptığına bağlıdır: bir dişliyi çıkarmak için sırasının doğru
+  hamlede gelmesi gerekir. Hizalanmadıysa bir hamle beklemen gerekir; bekleme
+  butonu da bir hamleye mal olur. Her çıkış bütün dişlileri döndürdüğü için
+  "çıkabileni çıkar" gibi sabit bir rutin işe yaramaz.
 - Level 4'ten itibaren her dokunuş (blocked, frozen ve Rotator dönüşleri dahil)
   hamle bütçesinden düşer. Board, limit dolmadan temizlenmelidir. 3 yıldız için
   solver'ın bulduğu en kısa çözüm gerekir.
@@ -31,8 +36,10 @@ puzzle uygulamasıdır. Oyuncu, önündeki yol açık olan okları board dışı
 - `lib/game/logic/level_solver.dart`: Alt sınır heuristiği ile A* araması; en
   kısa çözümü ve açılış seçeneklerini döndürür. Oyunda ipucu ve tıkanma
   kontrolü de bunu kullanır.
-- `lib/game/logic/level_difficulty.dart`: Plansız ve bir hamle ilerisini düşünen
-  (careful) oyuncu simülasyonlarıyla level zorluğunu ölçer.
+- `lib/game/logic/level_difficulty.dart`: Level zorluğunu oyuncu
+  simülasyonlarıyla ölçer. En önemlisi "stratejist": çıkabileni çıkarır,
+  taşları sona saklar, dişli için bekler ve hiç hamle harcamaz. Bu oyuncu bir
+  level'ı kolayca 3 yıldızla bitirebiliyorsa level kataloğa alınmaz.
 - `lib/game/logic/board_rules.dart`: Canlı oyunun kullandığı ortak geometri
   kuralları.
 
@@ -50,6 +57,9 @@ dart run tool/level_audit.dart
 - `tool/level_forge.dart`: Çözülebilirliği garanti eden board inşası.
 - `tool/generate_levels.dart`: Adayları arar, eşiklere göre eler ve
   `lib/game/data/campaign/` altına yazar.
+- `tool/reindex_campaign.dart`: Aralıklar paralel üretildiği için sınırlarda
+  zorluk düşebilir. Bu araç 14. level'dan sonrasını en kısa çözüm uzunluğuna
+  göre sıralayıp numaraları yeniden verir.
 - `tool/generate_progression.dart`: Eski, kullanılmayan ilk generator denemesi;
   yalnızca referans için yorum satırı olarak saklanır.
 
@@ -80,7 +90,7 @@ iskeletleri bulunur. Oyun portre moduna sabitlenmiştir.
 
 - 3x3 ile 8x8 arasında 300 level (3 öğretici + 297 üretilmiş), zorluk hiçbir
   level geçişinde düşmez
-- Normal, rotator, frozen, bomb ve taş (stone) oklar
+- Normal, rotator, frozen, bomb, taş (stone) ve dişli (gear) oklar
 - Animasyonlu splash ve ana sayfa; yeni oyun, devam et ve level seçimi
 - Kalıcı ilerleme, en iyi hamle, 1–3 yıldız ve kilit açma sistemi
 - Cihaz dilini izleyen ve ayarlardan değiştirilebilen Türkçe/İngilizce arayüz

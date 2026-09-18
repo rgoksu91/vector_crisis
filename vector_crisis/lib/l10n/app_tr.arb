@@ -80,5 +80,9 @@
   "introStone": "Gri taş: ilk engele kadar kayar ve duvar olur. Nereye düşeceğine dikkat!",
   "boardJammed": "Bir duvar tek çıkış yolunu kapattı.",
   "boardJammedTitle": "Tahta tıkandı",
-  "boardJammedDescription": "Bir taş yolu kalıcı olarak kapattı. Sırayı değiştirip yeniden dene."
+  "boardJammedDescription": "Bir taş yolu kalıcı olarak kapattı. Sırayı değiştirip yeniden dene.",
+  "introGear": "Yeşil dişli: her hamleden sonra 90° döner. Çıkış anını hesapla.",
+  "waited": "Bir hamle beklendi; dişliler döndü.",
+  "hintWait": "İpucu: dişliler hizalansın diye bir hamle bekle.",
+  "waitButton": "BEKLE"
 }

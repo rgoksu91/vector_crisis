@@ -22,6 +22,7 @@ import 'models/level_data.dart';
 /// Levels where the in-game hints introduce a mechanic.
 abstract final class LevelPlanMarks {
   static const firstStoneLevel = 12;
+  static const firstGearLevel = 14;
 }
 
 /// Matches the budget tool/generate_levels.dart solves every level within, so
@@ -86,12 +87,39 @@ class ArrowChaosGame extends FlameGame {
     _loadLevel(initialLevelIndex.clamp(0, levels.length - 1));
   }
 
+  /// Every counted move turns all Gears one quarter clockwise, which is what
+  /// makes the order of moves decide how many are needed.
+  void _spendMove({ArrowComponent? leaving}) {
+    _moves++;
+    for (final arrow in _arrows) {
+      if (arrow.type == ArrowType.gear && arrow != leaving && !arrow.isMoving) {
+        arrow.rotateClockwise();
+      }
+    }
+  }
+
+  /// Spends a move on nothing to bring the Gears round. Tapping something
+  /// blocked does the same thing; this is the honest button for it.
+  void waitOneMove() {
+    if (_levelLocked || _actionInProgress || !_gearsOnBoard) return;
+    _combo = 0;
+    _spendMove();
+    _haptic(HapticFeedback.selectionClick);
+    _setMessage(GameHudMessage.waited);
+    _publishHud();
+    _scheduleJamCheck();
+    _checkMoveLimit();
+  }
+
+  bool get _gearsOnBoard =>
+      _arrows.any((arrow) => arrow.type == ArrowType.gear && !arrow.isMoving);
+
   void onArrowTapped(ArrowComponent arrow) {
     if (_levelLocked || _actionInProgress || arrow.isMoving) return;
 
     if (arrow.frozen) {
       _combo = 0;
-      _moves++;
+      _spendMove();
       arrow.playBlocked();
       _haptic(HapticFeedback.heavyImpact);
       _setMessage(GameHudMessage.frozenArrowBlocked);
@@ -106,7 +134,7 @@ class ArrowChaosGame extends FlameGame {
 
     if (arrow.type == ArrowType.rotator && !clear) {
       _combo = 0;
-      _moves++;
+      _spendMove();
       arrow.rotateClockwise();
       _haptic(HapticFeedback.selectionClick);
       _setMessage(GameHudMessage.rotatorTurned);
@@ -118,7 +146,7 @@ class ArrowChaosGame extends FlameGame {
 
     if (!clear) {
       _combo = 0;
-      _moves++;
+      _spendMove();
       arrow.playBlocked();
       _haptic(HapticFeedback.mediumImpact);
       _setMessage(GameHudMessage.pathBlocked);
@@ -129,7 +157,7 @@ class ArrowChaosGame extends FlameGame {
 
     if (isStone) {
       _combo = 0;
-      _moves++;
+      _spendMove(leaving: arrow);
       _haptic(HapticFeedback.mediumImpact);
       _setMessage(GameHudMessage.none);
       _slideStone(arrow, slide);
@@ -138,7 +166,7 @@ class ArrowChaosGame extends FlameGame {
     }
 
     _combo++;
-    _moves++;
+    _spendMove(leaving: arrow);
     _haptic(HapticFeedback.lightImpact);
     _setMessage(
       _combo >= 3 ? GameHudMessage.combo : GameHudMessage.none,
@@ -189,7 +217,16 @@ class ArrowChaosGame extends FlameGame {
 
     // The first exitable arrow is exactly how an unplanned player loses, so
     // the hint follows the solver from the current position instead.
-    final candidate = _solverHint() ?? _greedyHint();
+    final plan = _solverHint();
+    if (plan != null && plan.$2 == SolverActionType.wait) {
+      _hintsRemaining--;
+      _haptic(HapticFeedback.selectionClick);
+      _setMessage(GameHudMessage.hintWait);
+      hud.value = hud.value.copyWith(hintsRemaining: _hintsRemaining);
+      return;
+    }
+
+    final candidate = plan?.$1 ?? _greedyHint();
 
     if (candidate == null) {
       _setMessage(GameHudMessage.noAvailableMove);
@@ -222,7 +259,7 @@ class ArrowChaosGame extends FlameGame {
     );
   }
 
-  ArrowComponent? _solverHint() {
+  (ArrowComponent?, SolverActionType)? _solverHint() {
     final pieces = _pieces();
     if (pieces.isEmpty) return null;
     final solution = LevelSolver.analyze(
@@ -230,7 +267,9 @@ class ArrowChaosGame extends FlameGame {
       maxVisitedStates: _hintStateBudget,
     ).solution;
     if (solution == null || solution.isEmpty) return null;
-    return pieces[solution.first.arrowId];
+    final next = solution.first;
+    if (next.type == SolverActionType.wait) return (null, next.type);
+    return (pieces[next.arrowId], next.type);
   }
 
   List<ArrowComponent> _pieces() =>
@@ -389,6 +428,7 @@ class ArrowChaosGame extends FlameGame {
       hintsRemaining: _hintsRemaining,
       rewardedHintUsed: false,
       phase: GamePhase.playing,
+      gearsOnBoard: _gearsOnBoard,
       message: _levelIntroMessage(_currentLevel.id),
     );
   }
@@ -562,6 +602,7 @@ class ArrowChaosGame extends FlameGame {
 
   void _publishHud() {
     hud.value = hud.value.copyWith(
+      gearsOnBoard: _gearsOnBoard,
       remaining: _arrows.where((arrow) => !arrow.isMoving).length,
       combo: _combo,
       moves: _moves,
@@ -596,6 +637,7 @@ class ArrowChaosGame extends FlameGame {
     8 => GameHudMessage.introFrozen,
     10 => GameHudMessage.introBomb,
     LevelPlanMarks.firstStoneLevel => GameHudMessage.introStone,
+    LevelPlanMarks.firstGearLevel => GameHudMessage.introGear,
     16 => GameHudMessage.introRotatorClockwise,
     _ => GameHudMessage.none,
   };

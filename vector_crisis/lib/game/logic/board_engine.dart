@@ -12,8 +12,10 @@ import '../models/level_data.dart';
 /// `alive | aux << arrowCount`.
 ///
 /// Stones are what make the game non-monotone: a wall that lands on another
-/// arrow's only way out can jam the board for good, so the order of moves
-/// matters and not just their number.
+/// arrow's only way out can jam the board for good. Gears add the other half:
+/// every Gear turns a quarter clockwise after every move, so which way one
+/// points depends on how many moves have been played, and the order of moves
+/// decides how many are needed.
 class BoardEngine {
   /// Beyond this many arrows a state no longer fits in one integer key.
   static const maxArrows = 44;
@@ -25,6 +27,7 @@ class BoardEngine {
   final int allMask;
   final int rotatorCount;
   final int stoneCount;
+  final int gearCount;
   final List<int> _rayMask;
   final List<bool> _wallBlocked;
   final List<int> _neighbourMask;
@@ -35,6 +38,7 @@ class BoardEngine {
   final int _frozenMask;
   final int _bombMask;
   final int _stoneMask;
+  final int _gearMask;
 
   /// Per Stone: cells on its path in order, as the arrow standing there (or
   /// -1), whether a fixed wall stands there, and the path length.
@@ -55,6 +59,7 @@ class BoardEngine {
     this.allMask,
     this.rotatorCount,
     this.stoneCount,
+    this.gearCount,
     this._rayMask,
     this._wallBlocked,
     this._neighbourMask,
@@ -65,6 +70,7 @@ class BoardEngine {
     this._frozenMask,
     this._bombMask,
     this._stoneMask,
+    this._gearMask,
     this._pathArrow,
     this._pathWall,
     this._pathLength,
@@ -117,7 +123,9 @@ class BoardEngine {
     var frozenMask = 0;
     var bombMask = 0;
     var stoneMask = 0;
+    var gearMask = 0;
     var rotators = 0;
+    var gears = 0;
 
     for (var i = 0; i < count; i++) {
       final arrow = arrows[i];
@@ -134,6 +142,9 @@ class BoardEngine {
           stoneMask |= 1 << i;
           stoneSlot[i] = stoneArrow.length;
           stoneArrow.add(i);
+        case ArrowType.gear:
+          gearMask |= 1 << i;
+          gears++;
         case ArrowType.normal:
           break;
       }
@@ -160,7 +171,8 @@ class BoardEngine {
     }
 
     final stones = stoneArrow.length;
-    final stateBits = count + rotators * 2 + stones * _landBits;
+    final stateBits =
+        count + rotators * 2 + stones * _landBits + (gears > 0 ? 2 : 0);
     if (stateBits > maxStateBits) {
       throw ArgumentError(
         'Level ${level.id} needs $stateBits state bits; at most '
@@ -212,6 +224,7 @@ class BoardEngine {
       count == 0 ? 0 : (1 << count) - 1,
       rotators,
       stones,
+      gears,
       rayMask,
       wallBlocked,
       neighbourMask,
@@ -222,6 +235,7 @@ class BoardEngine {
       frozenMask,
       bombMask,
       stoneMask,
+      gearMask,
       pathArrow,
       pathWall,
       pathLength,
@@ -230,14 +244,39 @@ class BoardEngine {
     );
   }
 
-  int get stateBits => arrowCount + rotatorCount * 2 + stoneCount * _landBits;
+  int get stateBits =>
+      arrowCount +
+      rotatorCount * 2 +
+      stoneCount * _landBits +
+      (gearCount > 0 ? 2 : 0);
+
+  int get _gearShift => rotatorCount * 2 + stoneCount * _landBits;
+
+  /// Quarter turns every Gear has taken, which is the move count mod 4.
+  int gearPhase(int aux) => gearCount == 0 ? 0 : (aux >> _gearShift) & 3;
+
+  int _advanceGears(int aux) => gearCount == 0
+      ? aux
+      : (aux & ~(3 << _gearShift)) | (((gearPhase(aux) + 1) & 3) << _gearShift);
 
   ArrowType typeOf(int arrow) => _types[arrow];
 
   int directionIndex(int arrow, int aux) {
+    if ((_gearMask >> arrow) & 1 != 0) {
+      return (_baseDirection[arrow] + gearPhase(aux)) & 3;
+    }
     final slot = _rotatorSlot[arrow];
     if (slot < 0) return _baseDirection[arrow];
     return (_baseDirection[arrow] + ((aux >> (slot * 2)) & 3)) & 3;
+  }
+
+  /// Spending a move without touching the board, which is what a player does
+  /// by tapping something blocked. It is only ever useful to line a Gear up,
+  /// so it is offered only while one is still on the board.
+  int waitMove(int key) {
+    if (gearCount == 0 || (key & allMask & _gearMask) == 0) return -1;
+    final aux = key >> arrowCount;
+    return (key & allMask) | (_advanceGears(aux) << arrowCount);
   }
 
   int _landStep(int stoneSlot, int aux) =>
@@ -335,24 +374,25 @@ class BoardEngine {
         if (steps == 0) return -1;
         final shift = rotatorCount * 2 + _stoneSlot[arrow] * _landBits;
         aux = (aux & ~((_maxPath - 1) << shift)) | ((steps - 1) << shift);
-        return (alive & ~bit) | (aux << arrowCount);
+        return (alive & ~bit) | (_advanceGears(aux) << arrowCount);
       case ArrowType.rotator:
         if (isClear(arrow, alive, aux)) {
-          return (alive & ~bit) | (aux << arrowCount);
+          return (alive & ~bit) | (_advanceGears(aux) << arrowCount);
         }
         final shift = _rotatorSlot[arrow] * 2;
         final turned = (((aux >> shift) & 3) + 1) & 3;
         aux = (aux & ~(3 << shift)) | (turned << shift);
-        return alive | (aux << arrowCount);
+        return alive | (_advanceGears(aux) << arrowCount);
       case ArrowType.bomb:
         if (!isClear(arrow, alive, aux)) return -1;
         // Stones are too heavy to blast; only ordinary arrows go with it.
         final blast = _neighbourMask[arrow] & alive & ~_stoneMask;
-        return (alive & ~bit & ~blast) | (aux << arrowCount);
+        return (alive & ~bit & ~blast) | (_advanceGears(aux) << arrowCount);
       case ArrowType.normal:
       case ArrowType.frozen:
+      case ArrowType.gear:
         if (!isClear(arrow, alive, aux)) return -1;
-        return (alive & ~bit) | (aux << arrowCount);
+        return (alive & ~bit) | (_advanceGears(aux) << arrowCount);
     }
   }
 

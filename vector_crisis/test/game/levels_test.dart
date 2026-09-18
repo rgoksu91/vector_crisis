@@ -110,6 +110,12 @@ void main() {
     for (final level in levels.skip(11)) {
       expect(has(level, ArrowType.stone), isTrue, reason: '${level.id}');
     }
+    for (final level in levels.take(13)) {
+      expect(has(level, ArrowType.gear), isFalse, reason: '${level.id}');
+    }
+    for (final level in levels.skip(13)) {
+      expect(has(level, ArrowType.gear), isTrue, reason: '${level.id}');
+    }
     for (final level in levels.skip(5).take(4)) {
       expect(
         analyses[level.id]!.solution!.any(
@@ -140,6 +146,13 @@ void main() {
         greaterThanOrEqualTo(0.05),
         reason: 'Level ${level.id} cannot be lost without planning.',
       );
+      if (level.id >= 16) {
+        expect(
+          report.strategistOptimalRate,
+          lessThanOrEqualTo(0.35),
+          reason: 'Level ${level.id} falls to a fixed strategy.',
+        );
+      }
       if (level.id < 12) continue;
       expect(
         report.sensibleStuckRate,
@@ -341,6 +354,16 @@ class _GameplaySimulation {
       ];
 
   void apply(SolverAction action) {
+    if (action.type == SolverActionType.wait) {
+      expect(
+        arrows.any((arrow) => arrow.type == ArrowType.gear),
+        isTrue,
+        reason: 'Waiting is only a move while a Gear is on the board.',
+      );
+      _turnGears();
+      return;
+    }
+
     final arrow = arrows.singleWhere((arrow) => arrow.id == action.arrowId);
     expect(arrow.frozen, isFalse, reason: 'A frozen arrow was selected.');
 
@@ -375,6 +398,7 @@ class _GameplaySimulation {
       );
       walls.add((row: row, column: column));
       _remove({(row: arrow.row, column: arrow.column)});
+      _turnGears(except: arrow);
       return;
     }
     expect(arrow.type, isNot(ArrowType.stone));
@@ -383,6 +407,7 @@ class _GameplaySimulation {
       expect(arrow.type, ArrowType.rotator);
       expect(clear, isFalse, reason: 'A clear rotator must exit, not rotate.');
       arrow.direction = arrow.direction.clockwise;
+      _turnGears();
       return;
     }
 
@@ -403,6 +428,16 @@ class _GameplaySimulation {
     }
 
     _remove(removed);
+    _turnGears(except: arrow);
+  }
+
+  /// Every move turns every Gear still on the board, the one leaving aside.
+  void _turnGears({_GameplayArrow? except}) {
+    for (final arrow in arrows) {
+      if (arrow.type == ArrowType.gear && arrow != except) {
+        arrow.direction = arrow.direction.clockwise;
+      }
+    }
   }
 
   Iterable<BoardCell> _occupied() => arrows

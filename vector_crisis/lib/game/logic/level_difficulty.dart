@@ -34,6 +34,14 @@ class DifficultyReport {
   final double carefulFailureRate;
   final double carefulStuckRate;
 
+  /// Plays the rules a person works out after a few levels: clear whatever can
+  /// leave, keep Stones for last and only slide them somewhere harmless, wait
+  /// for the Gears rather than turn a Rotator, and never waste a turn. If this
+  /// player can three-star a level, the level has no real decision in it.
+  final double strategistOptimalRate;
+  final double strategistFailureRate;
+  final double strategistAverageMoves;
+
   const DifficultyReport({
     required this.minimumMoves,
     required this.moveLimit,
@@ -47,13 +55,16 @@ class DifficultyReport {
     required this.carefulOptimalRate,
     required this.carefulFailureRate,
     required this.carefulStuckRate,
+    required this.strategistOptimalRate,
+    required this.strategistFailureRate,
+    required this.strategistAverageMoves,
   });
 
   /// Average moves wasted by a sensible run; 0 means the board plays itself.
   double get wasteMargin => sensibleAverageMoves - minimumMoves;
 }
 
-enum _Player { careless, sensible, careful }
+enum _Player { careless, sensible, careful, strategist }
 
 abstract final class LevelDifficulty {
   /// Deterministic for a given [seed] so tests and the generator agree.
@@ -76,6 +87,7 @@ abstract final class LevelDifficulty {
     final careful = board.stoneCount == 0
         ? sensible
         : play(_Player.careful, 0x2c9f);
+    final strategist = play(_Player.strategist, 0x71e3);
 
     return DifficultyReport(
       minimumMoves: optimum,
@@ -90,6 +102,9 @@ abstract final class LevelDifficulty {
       carefulOptimalRate: careful.optimalRate,
       carefulFailureRate: careful.failureRate,
       carefulStuckRate: careful.stuckRate,
+      strategistOptimalRate: strategist.optimalRate,
+      strategistFailureRate: strategist.failureRate,
+      strategistAverageMoves: strategist.averageMoves,
     );
   }
 
@@ -115,6 +130,14 @@ abstract final class LevelDifficulty {
       var moves = 0;
 
       while (key & board.allMask != 0 && moves < cap) {
+        if (player == _Player.strategist) {
+          final next = _strategistMove(board, key, buffer, random);
+          if (next < 0) break;
+          moves++;
+          key = next;
+          continue;
+        }
+
         final alive = key & board.allMask;
         final aux = key >> board.arrowCount;
         var count = player == _Player.careless
@@ -150,6 +173,46 @@ abstract final class LevelDifficulty {
       averageMoves: total / samples,
       worstMoves: worst,
     );
+  }
+
+  /// One move of the worked-out strategy, or -1 when it is stuck. The order
+  /// of the classes is the whole strategy: leave first, then a harmless slide,
+  /// then wait for the Gears, and only turn a Rotator as a last resort.
+  static int _strategistMove(
+    BoardEngine board,
+    int key,
+    List<int> buffer,
+    Random random,
+  ) {
+    final alive = key & board.allMask;
+    final aux = key >> board.arrowCount;
+    final exits = <int>[];
+    final slides = <int>[];
+    final turns = <int>[];
+    final count = board.collectPlayable(alive, aux, buffer);
+    for (var i = 0; i < count; i++) {
+      final arrow = buffer[i];
+      if (board.typeOf(arrow) == ArrowType.stone) {
+        if (!board.slideBlocksSomeone(arrow, key)) slides.add(arrow);
+      } else if (board.canExit(arrow, alive, aux)) {
+        exits.add(arrow);
+      } else {
+        turns.add(arrow);
+      }
+    }
+
+    if (exits.isNotEmpty) {
+      return board.move(exits[random.nextInt(exits.length)], key);
+    }
+    if (slides.isNotEmpty) {
+      return board.move(slides[random.nextInt(slides.length)], key);
+    }
+    final waited = board.waitMove(key);
+    if (waited >= 0) return waited;
+    if (turns.isNotEmpty) {
+      return board.move(turns[random.nextInt(turns.length)], key);
+    }
+    return -1;
   }
 
   /// Removes Stone slides that visibly block someone, keeping the list
