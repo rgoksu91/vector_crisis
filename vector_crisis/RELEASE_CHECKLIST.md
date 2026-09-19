@@ -12,17 +12,12 @@ iOS bundle identifier: com.rgoksu.vectorcrisis
 
 ## AdMob
 
-- Android ve iOS için ayrı interstitial/rewarded reklam birimleri oluştur.
-- Release build sırasında gerçek reklam birimi ID'lerini şu `--dart-define`
-  anahtarlarıyla ver: `ADMOB_ANDROID_INTERSTITIAL_ID`,
-  `ADMOB_ANDROID_REWARDED_ID`, `ADMOB_IOS_INTERSTITIAL_ID` ve
-  `ADMOB_IOS_REWARDED_ID`.
-- Release build'i gerçek ID olmadan yayınlama. `GecisId` ve `OdulId`, reklam
-  servisini kapalı tutan geçici fallback değerleridir.
-- `android/app/src/main/AndroidManifest.xml` içindeki Google test app ID'sini
-  Android AdMob app ID'siyle değiştir.
-- `ios/Runner/Info.plist` içindeki Google test app ID'sini iOS AdMob app ID'siyle
-  değiştir.
+- [x] Android ve iOS production reklam birimleri `lib/services/ads_service.dart`
+  içinde varsayılan değer olarak tanımlı. Gerekirse `--dart-define` ile
+  (`ADMOB_ANDROID_INTERSTITIAL_ID`, `ADMOB_ANDROID_REWARDED_ID`,
+  `ADMOB_IOS_INTERSTITIAL_ID`, `ADMOB_IOS_REWARDED_ID`) üzerine yazılabilir.
+- [x] `AndroidManifest.xml` ve `Info.plist` production AdMob app ID'lerini
+  kullanıyor.
 - AdMob panelinde GDPR/UMP mesajını yayınla ve test cihazlarını tanımla.
 - Gerçek reklam kimliklerini yalnız release öncesi kullan; geliştirme sırasında
   uygulamanın otomatik seçtiği Google test reklam birimlerini kullan.

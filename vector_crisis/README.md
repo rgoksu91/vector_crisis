@@ -117,4 +117,6 @@ dosyasında listelenmiştir.
 Debug build'ler Google'ın resmi test reklam birimlerini kullanır. Production
 reklam birimleri release build'e `ADMOB_ANDROID_INTERSTITIAL_ID`,
 `ADMOB_ANDROID_REWARDED_ID`, `ADMOB_IOS_INTERSTITIAL_ID` ve
-`ADMOB_IOS_REWARDED_ID` dart-define değerleriyle verilir.
+`ADMOB_IOS_REWARDED_ID` dart-define değerleriyle verilir. Android ve iOS
+production ID'leri kodda varsayılan olarak tanımlıdır; bu yüzden release
+build'ler (Xcode archive dahil) define gerektirmez.

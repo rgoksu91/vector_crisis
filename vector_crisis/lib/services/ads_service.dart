@@ -8,19 +8,19 @@ import 'ad_pacing_policy.dart';
 abstract final class AdUnitIds {
   static const _androidInterstitial = String.fromEnvironment(
     'ADMOB_ANDROID_INTERSTITIAL_ID',
-    defaultValue: 'GecisId',
+    defaultValue: 'ca-app-pub-1456815469244918/2915789947',
   );
   static const _iosInterstitial = String.fromEnvironment(
     'ADMOB_IOS_INTERSTITIAL_ID',
-    defaultValue: 'GecisId',
+    defaultValue: 'ca-app-pub-1456815469244918/3151593665',
   );
   static const _androidRewarded = String.fromEnvironment(
     'ADMOB_ANDROID_REWARDED_ID',
-    defaultValue: 'OdulId',
+    defaultValue: 'ca-app-pub-1456815469244918/4017952771',
   );
   static const _iosRewarded = String.fromEnvironment(
     'ADMOB_IOS_REWARDED_ID',
-    defaultValue: 'OdulId',
+    defaultValue: 'ca-app-pub-1456815469244918/3830250518',
   );
 
   static String get interstitial {
