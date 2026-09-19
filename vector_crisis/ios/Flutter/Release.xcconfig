@@ -1,1 +1,8 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+
+// GoogleMobileAds ships GoogleMobileAds_Beta.h as a private umbrella that no
+// modulemap declares, and google_mobile_ads imports it. Runner builds that
+// module explicitly via GeneratedPluginRegistrant, so it needs the allowance too.
+ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES
+CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES
