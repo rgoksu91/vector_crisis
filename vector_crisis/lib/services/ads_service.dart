@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'ad_pacing_policy.dart';
@@ -83,6 +85,7 @@ class AdsService {
     _initializationStarted = true;
     try {
       await _gatherConsent();
+      await _requestTrackingAuthorization();
       await _startAdsIfAllowed();
     } catch (error) {
       debugPrint('AdMob initialization failed: $error');
@@ -106,6 +109,41 @@ class AdsService {
       },
     );
     await completer.future;
+  }
+
+  /// Asks for App Tracking Transparency before the ads SDK starts. UMP only
+  /// shows the prompt when an IDFA message is published in AdMob, so it is
+  /// requested here directly. iOS drops the request silently unless the app
+  /// is active, hence the wait for the resumed state.
+  Future<void> _requestTrackingAuthorization() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS || _disposed) return;
+    try {
+      if (await AppTrackingTransparency.trackingAuthorizationStatus !=
+          TrackingStatus.notDetermined) {
+        return;
+      }
+      await _waitUntilResumed();
+      if (_disposed) return;
+      await AppTrackingTransparency.requestTrackingAuthorization();
+    } catch (error) {
+      debugPrint('Tracking authorization error: $error');
+    }
+  }
+
+  Future<void> _waitUntilResumed() async {
+    final binding = WidgetsBinding.instance;
+    if (binding.lifecycleState == AppLifecycleState.resumed) return;
+    final resumed = Completer<void>();
+    final listener = AppLifecycleListener(
+      onResume: () {
+        if (!resumed.isCompleted) resumed.complete();
+      },
+    );
+    try {
+      await resumed.future;
+    } finally {
+      listener.dispose();
+    }
   }
 
   Future<void> _refreshPrivacyOptionsRequirement() async {
