@@ -4,6 +4,7 @@ import '../app/app_controller.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../services/ads_service.dart';
 import 'design/animated_background.dart';
+import 'design/app_dialog.dart';
 import 'design/app_theme.dart';
 import 'design/navigation.dart';
 import 'game_page.dart';
@@ -52,17 +53,24 @@ class _HomePageState extends State<HomePage>
     if (widget.controller.hasProgress) {
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text(l10n.startNewGameTitle),
-          content: Text(l10n.startNewGameBody),
+        barrierColor: AppColors.background.withValues(alpha: 0.82),
+        builder: (context) => AppDialog(
+          icon: Icons.restart_alt_rounded,
+          title: l10n.startNewGameTitle,
+          message: l10n.startNewGameBody,
+          accentColor: AppColors.danger,
           actions: [
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.danger,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(l10n.newGame),
+            ),
             TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.newGame),
             ),
           ],
         ),

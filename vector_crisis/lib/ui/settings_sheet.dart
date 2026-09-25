@@ -83,21 +83,23 @@ Future<void> showSettingsSheet(
                 secondary: const Icon(Icons.vibration_rounded),
                 onChanged: controller.setHapticsEnabled,
               ),
-              const Divider(height: 28),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.privacy_tip_outlined),
-                title: Text(l10n.adPrivacy),
-                subtitle: Text(l10n.adPrivacySubtitle),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () async {
-                  final shown = await ads.showPrivacyOptions();
-                  if (!context.mounted || shown) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.privacyUnavailable)),
-                  );
-                },
-              ),
+              if (ads.privacyOptionsRequired) ...[
+                const Divider(height: 28),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: Text(l10n.adPrivacy),
+                  subtitle: Text(l10n.adPrivacySubtitle),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () async {
+                    final shown = await ads.showPrivacyOptions();
+                    if (!context.mounted || shown) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.privacyUnavailable)),
+                    );
+                  },
+                ),
+              ],
               if (kDebugMode) ...[
                 const Divider(height: 28),
                 Text(

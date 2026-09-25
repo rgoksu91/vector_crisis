@@ -35,4 +35,21 @@ ThemeData buildAppTheme() => ThemeData(
       textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
     ),
   ),
+  dialogTheme: DialogThemeData(
+    backgroundColor: AppColors.surface,
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+  ),
+  snackBarTheme: SnackBarThemeData(
+    behavior: SnackBarBehavior.floating,
+    backgroundColor: AppColors.surfaceLight,
+    contentTextStyle: const TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.w700,
+    ),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+    ),
+  ),
 );

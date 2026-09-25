@@ -64,12 +64,17 @@ class AdsService {
   bool _loadingInterstitial = false;
   bool _loadingRewarded = false;
   bool _disposed = false;
+  bool _privacyOptionsRequired = false;
 
   AdsService({AdPacingPolicy? pacing}) : pacing = pacing ?? AdPacingPolicy();
 
   bool get _isSupported =>
       defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS;
+
+  /// UMP only offers a privacy options form where a regulation requires one
+  /// (e.g. EEA/UK); elsewhere showing it fails, so the entry point is hidden.
+  bool get privacyOptionsRequired => _privacyOptionsRequired;
 
   Future<void> initialize() async {
     if (_initializationStarted || !_isSupported || !AdUnitIds.isConfigured) {
@@ -92,6 +97,7 @@ class AdsService {
         await ConsentForm.loadAndShowConsentFormIfRequired((error) {
           if (error != null) debugPrint('Consent form error: $error');
         });
+        await _refreshPrivacyOptionsRequirement();
         if (!completer.isCompleted) completer.complete();
       },
       (error) {
@@ -100,6 +106,17 @@ class AdsService {
       },
     );
     await completer.future;
+  }
+
+  Future<void> _refreshPrivacyOptionsRequirement() async {
+    try {
+      _privacyOptionsRequired =
+          await ConsentInformation.instance
+              .getPrivacyOptionsRequirementStatus() ==
+          PrivacyOptionsRequirementStatus.required;
+    } catch (error) {
+      debugPrint('Privacy options status error: $error');
+    }
   }
 
   Future<bool> showPrivacyOptions() async {

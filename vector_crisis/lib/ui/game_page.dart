@@ -7,6 +7,7 @@ import '../game/arrow_chaos_game.dart';
 import '../game/models/game_hud_state.dart';
 import '../l10n/generated/app_localizations.dart';
 import '../services/ads_service.dart';
+import 'design/app_dialog.dart';
 import 'design/app_theme.dart';
 
 class GamePage extends StatefulWidget {
@@ -96,18 +97,21 @@ class _GamePageState extends State<GamePage> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.hintRewardTitle),
-        content: Text(l10n.hintRewardDescription),
+      barrierColor: AppColors.background.withValues(alpha: 0.82),
+      builder: (context) => AppDialog(
+        icon: Icons.lightbulb_rounded,
+        title: l10n.hintRewardTitle,
+        message: l10n.hintRewardDescription,
+        accentColor: AppColors.gold,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.cancel),
-          ),
           FilledButton.icon(
             onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.ondemand_video_rounded),
             label: Text(l10n.watchAdHints),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
           ),
         ],
       ),
@@ -132,16 +136,18 @@ class _GamePageState extends State<GamePage> {
     final action = await showDialog<_PauseAction>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.gamePaused),
-        content: Text(l10n.gamePausedBody),
-        actionsAlignment: MainAxisAlignment.end,
+      barrierColor: AppColors.background.withValues(alpha: 0.82),
+      builder: (context) => AppDialog(
+        icon: Icons.pause_rounded,
+        title: l10n.gamePaused,
+        message: l10n.gamePausedBody,
         actions: [
-          FilledButton(
+          FilledButton.icon(
             onPressed: () => Navigator.pop(context, _PauseAction.resume),
-            child: Text(l10n.resume),
+            icon: const Icon(Icons.play_arrow_rounded),
+            label: Text(l10n.resume),
           ),
-          TextButton.icon(
+          OutlinedButton.icon(
             onPressed: () => Navigator.pop(context, _PauseAction.restart),
             icon: const Icon(Icons.refresh_rounded),
             label: Text(l10n.restartLevel),
